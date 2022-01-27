@@ -41,7 +41,7 @@ Example Playbook
 
   - name: Setup Authentication with NMS
     include_role: 
-      nginxinc.nms_authenticate
+      nginxinc.nginx_management_suite.nms_authenticate
 
 
 ```
