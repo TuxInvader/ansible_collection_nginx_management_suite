@@ -1,0 +1,83 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_instance_group
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: Clear nms_current_config state
+  set_fact:
+    nms_current_config: {}
+
+- name: GET NMS Instance Group status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/instance-groups"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_ig_status
+
+- name: Find matching configuration
+  set_fact:
+    nms_current_config: "{{ item }}"
+  when: item.name == nms_instance_group.name
+  loop: "{{ nms_ig_status.json['items'] }}"
+
+- name: Create NMS Instance Group
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/instance-groups"
+    method: POST
+    body: "{{ nms_instance_group }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 201
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_post_response
+  when: nms_current_config | length == 0
+
+- name: Patch NMS Instance Group
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/instance-groups/{{ nms_current_config.uid }}"
+    method: PATCH
+    body: "{{ nms_instance_group }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_put_response
+  when: nms_current_config | length > 0
+
+- name: Store UID for configuration (when new)
+  set_fact:
+    current_uid: "{{ nms_post_response.json.uid }}"
+  when: nms_post_response.skip_reason is undefined
+
+- name: Store UID for configuration (when updated)
+  set_fact:
+    current_uid: "{{ nms_put_response.json.uid }}"
+  when: nms_put_response.skip_reason is undefined
+
+- name: GET NMS IG status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/instance-groups/{{ current_uid }}"
+    method: GET
+    status_code: 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_instance_group_status
+

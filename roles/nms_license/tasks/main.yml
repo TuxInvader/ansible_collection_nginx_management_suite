@@ -1,0 +1,53 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_license
+
+- name: Check NMS Authentication
+  fail: 
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role. 
+  when: nms_auth_headers is undefined
+
+- name: GET NMS license status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/license/status"
+    method: GET
+    status_code: 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_license_status
+
+- name: PUT NMS license
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/license"
+    method: PUT
+    body:
+      metadata:
+        name: license
+      desiredState:
+        content: "{{ nms_license | b64encode }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+      - 202
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_response
+  when: nms_license_status.json.licenseStatus != "VALID" or ( nms_license_force | default(false) )
+
+- name: GET NMS license status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/license/status"
+    method: GET
+    status_code: 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_license_status
+

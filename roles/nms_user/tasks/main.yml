@@ -1,0 +1,64 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_user
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: GET NMS User status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/users/{{ nms_user.metadata.name }}"
+    method: GET
+    status_code:
+      - 200
+      - 404
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_user_status
+
+- name: Create NMS User
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/users"
+    method: POST
+    body: "{{ nms_user }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 201
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_response
+  when: nms_user_status.status == 404
+
+- name: Patch NMS User
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/users/{{ nms_user.metadata.name }}"
+    method: PATCH
+    body: "{{ nms_user }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_response
+  when: nms_user_status.status == 200
+
+- name: GET NMS User status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/users/{{ nms_user.metadata.name }}"
+    method: GET
+    status_code: 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_user_status
+
