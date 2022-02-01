@@ -1,0 +1,64 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_nim_certificate
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: Clear nsm_current_config state
+  set_fact:
+    nms_cert_upload: "{{ nms_nim_certificate }}"
+
+- name: Build Instance Refs
+  block:
+
+  - name: Get Instances
+    uri:
+      url: "https://{{ nms_fqdn }}{{ nms_api_version }}/instances"
+      method: GET
+      status_code:
+        - 200
+      validate_certs: "{{ nms_validate_certs | default(false) }}"
+      headers: "{{ nms_auth_headers }}"
+    register: nms_instance_status
+
+  - name: Build instanceRefs array
+    set_fact:
+      nms_cert_upload: "{{ nms_nim_certificate | combine( { 'instanceRefs': (nms_cert_upload.instanceRefs | default([])) + [  nms_api_version ~ '/systems/' ~ item.systemUid ~ '/instances/' ~ item.uid ] }, recursive=True) }}"
+    loop: "{{ nms_instance_status.json['items'] }}"
+    when: item.displayName in nms_instances
+
+  when: nms_instances is defined
+
+- name: Upsert Certificate
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/certs/{{ nms_nim_certificate.name }}"
+    method: PUT
+    body: "{{ nms_cert_upload }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+      - 201
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_response
+
+- name: GET Certificate status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/certs/{{ nms_nim_certificate.name }}"
+    method: GET
+    status_code: 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_nim_certificate_status
+  
