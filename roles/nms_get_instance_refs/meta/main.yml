@@ -1,0 +1,56 @@
+galaxy_info:
+  author: Mark Boddington
+  description: NGINX Management Suite (NMS) Licensing Role
+  company: F5
+  role_name: nms_license
+
+  # If the issue tracker for your role is not on github, uncomment the
+  # next line and provide a value
+  # issue_tracker_url: http://example.com/issue/tracker
+
+  # Choose a valid license ID from https://spdx.org - some suggested licenses:
+  # - BSD-3-Clause (default)
+  # - MIT
+  # - GPL-2.0-or-later
+  # - GPL-3.0-only
+  # - Apache-2.0
+  # - CC-BY-4.0
+  license: Apache-2.0
+
+  min_ansible_version: 2.1
+
+  platforms:
+    - name: Alpine
+      versions:
+        - any
+    - name: Amazon Linux 2
+      versions:
+        - any
+    - name: Debian
+      versions:
+        - buster
+        - bullseye
+    - name: EL
+      versions:
+        - 7
+        - 8
+    - name: FreeBSD
+      versions:
+        - 12.1
+    - name: Ubuntu
+      versions:
+        - bionic
+        - focal
+        - hirsute
+    - name: SLES
+      versions:
+        - 12
+        - 15
+
+  galaxy_tags:
+    - nginx
+    - oss
+    - opensource
+    - plus
+    - install
+

@@ -1,0 +1,50 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_nim_publish
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: Publish Configuration
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_nim_publish.rel }}/config"
+    method: POST
+    body: "{{ nms_nim_publish.config }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 202
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_publish_response
+
+- name: Wait for Publishing
+  block:
+
+  - name: Wait for Configuration
+    uri:
+      url: "https://{{ nms_fqdn }}{{ nms_publish_response.json.links.rel }}"
+      method: GET
+      return_content: true
+      status_code:
+        - 200
+        - 404
+      validate_certs: "{{ nms_validate_certs | default(false) }}"
+      headers: "{{ nms_auth_headers }}"
+    register: nms_publish_result
+    retries: 12
+    delay: 5
+    until: nms_publish_result.json.details.success is not none
+    failed_when: nms_publish_result.json.details.failure is not none
+
+  when: nms_nim_publish_wait == true
+

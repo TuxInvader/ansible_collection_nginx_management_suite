@@ -1,0 +1,32 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: GET NMS Config status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/instances"
+    method: GET
+    status_code:
+      - 200
+      - 404
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_instance_status
+
+- name: Set nms_instance_refs fact
+  set_fact:
+    nms_instance_refs: "{{ nms_instance_refs | default({}) | combine({ item.displayName: ( item | combine({'rel': nms_api_version ~ '/systems/' ~ item.systemUid ~ '/instances/' ~ item.uid}))}, recursive=True) }}"
+  loop: "{{ nms_instance_status.json['items'] }}"
+
+

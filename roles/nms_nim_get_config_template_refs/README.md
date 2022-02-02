@@ -1,7 +1,7 @@
 NMS Licensing
 =============
 
-NGINX Managment Suite (NMS) Ansible role for Licensing
+NGINX Managment Suite (NMS) Ansible role for getting the list of stored config templates
 
 
 Requirements
@@ -12,7 +12,10 @@ Requirements
 Role Variables
 --------------
 
-`nms_user_name`
+`nms_auth_header`
+`nms_fqdn`
+`nms_api_version`
+`nms_validate_certs`
 
 Dependencies
 ------------
@@ -40,6 +43,24 @@ Example Playbook
     include_role: 
       name: nginxinc.nginx_management_suite.nms_authenticate
 
+  - name: Get Config Templates
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_nim_config_template_refs
+
+```
+
+This returns a fact `nms_nim_config_template_refs` containing the instances in the form
+
+```
+{
+    "base-config": {
+        "configName": "base-config",
+        "createTime": "2022-02-02T15:08:01.524Z",
+        "rel": "/api/platform/v1/configs/724cfcbb-c94c-4d37-800d-96bcf7e6f63e",
+        "uid": "724cfcbb-c94c-4d37-800d-96bcf7e6f63e",
+        "updateTime": "2022-02-02T15:11:02Z"
+    }
+}
 ```
 
 License

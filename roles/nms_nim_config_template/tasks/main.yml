@@ -14,10 +14,6 @@
     msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
   when: nms_auth_headers is undefined
 
-- name: Clear nsm_current_config state
-  set_fact:
-    nms_current_config: {}
-
 - name: GET NMS Config status
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_api_version }}/configs"
@@ -29,10 +25,9 @@
     headers: "{{ nms_auth_headers }}"
   register: nms_nim_config_template_status
 
-- name: Find matching configuration
+- name: Set nms_nim_config_template_refs fact
   set_fact:
-    nms_current_config: "{{ item }}"
-  when: item.configName == nms_nim_config_template.configName
+    nms_nim_config_template_refs: "{{ nms_nim_config_template_refs | default({}) | combine({ item.configName: (item  | combine({'rel': nms_api_version ~ '/configs/' ~ item.uid}) )}, recursive=True) }}"
   loop: "{{ nms_nim_config_template_status.json['items'] }}"
 
 - name: Create NMS Config
@@ -47,11 +42,11 @@
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: nms_post_response
-  when: nms_current_config | length == 0
+  when: nms_nim_config_template_refs is undefined or nms_nim_config_template_refs[nms_nim_config_template.configName] is undefined
 
 - name: Patch NMS Config
   uri:
-    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/configs/{{ nms_current_config.uid }}"
+    url: "https://{{ nms_fqdn }}{{ nms_nim_config_template_refs[nms_nim_config_template.configName].rel }}"
     method: PUT
     body: "{{ nms_nim_config_template }}"
     body_format: json
@@ -61,21 +56,27 @@
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: nms_put_response
-  when: nms_current_config | length > 0
+  when: nms_nim_config_template_refs[nms_nim_config_template.configName] is defined
 
-- name: Store UID for configuration (when new)
-  set_fact:
-    current_uid: "{{ nms_post_response.json.uid }}"
-  when: nms_post_response.skip_reason is undefined
+- name: GET NMS Config list
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/configs"
+    method: GET
+    status_code:
+      - 200
+      - 404
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_nim_config_template_status
 
-- name: Store UID for configuration (when updated)
+- name: Set nms_nim_config_template_refs fact
   set_fact:
-    current_uid: "{{ nms_put_response.json.uid }}"
-  when: nms_put_response.skip_reason is undefined
+    nms_nim_config_template_refs: "{{ nms_nim_config_template_refs | default({}) | combine({ item.configName: (item  | combine({'rel': nms_api_version ~ '/configs/' ~ item.uid}) )}, recursive=True) }}"
+  loop: "{{ nms_nim_config_template_status.json['items'] }}"
 
 - name: GET NMS Config status
   uri:
-    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/configs/{{ current_uid }}"
+    url: "https://{{ nms_fqdn }}{{ nms_nim_config_template_refs[ nms_nim_config_template.configName ].rel }}"
     method: GET
     status_code: 200
     validate_certs: "{{ nms_validate_certs | default(false) }}"

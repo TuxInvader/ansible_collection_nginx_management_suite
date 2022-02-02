@@ -36,22 +36,26 @@ Example Playbook
 
   tasks:
 
+  # Auth with NIM
   - name: Setup Authentication with NMS
     include_role: 
       name: nginxinc.nginx_management_suite.nms_authenticate
 
-    - name: Upsert Certificate
+  # Create nms_instance_refs fact
+  - name: Get Instances
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_get_instance_refs
+
+  # Upload certificate to NIM and assosciate it with nginx1 and nginx2 instances
+  - name: Upsert Certificate
     include_role:
       name: nginxinc.nginx_management_suite.nms_nim_certificate
     vars:
-      #nms_instances:
-      #  - nginx1
-      #  - nginx2
       nms_nim_certificate:
         name: NIM
-        #instanceRefs:
-        #  - /api/platform/v1/systems/<sysuid>/instances/<uid>
-        #  - /api/platform/v1/systems/<sysuid>/instances/<uid>
+        instanceRefs:
+          - "{{ nms_instance_refs.nignx1.rel }}
+          - "{{ nms_instance_refs.nignx2.rel }}
         certPEMDetails:
           type: PEM
           caCerts:
@@ -69,8 +73,7 @@ Example Playbook
 ```
 
 To publish the certificate to an NGINX instance, you need to provide the instanceRefs paramater as part of
-the `nms_nim_certificate` dictionary. Alternatively you can provide an optional `nms_instances` list which
-includes the displayNames of the instances.
+the `nms_nim_certificate` dictionary. The link can be retrieved using the `nms_get_instance_refs` role.
 
 License
 -------

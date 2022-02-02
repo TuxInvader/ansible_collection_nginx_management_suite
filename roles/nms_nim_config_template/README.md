@@ -1,7 +1,7 @@
 NMS Licensing
 =============
 
-NGINX Managment Suite (NMS) Ansible role for Licensing
+NGINX Managment Suite (NMS) Ansible role for creating NGINX configs
 
 
 Requirements
@@ -11,8 +11,10 @@ Requirements
 
 Role Variables
 --------------
-
-`nms_user_name`
+`nms_fqdn`
+`nms_api_version`
+`nms_validate_certs`
+`nms_nim_config_template`
 
 Dependencies
 ------------
@@ -115,6 +117,8 @@ Example Playbook
               ZT1vbjsgYWxsb3cgMTI3LjAuMC4xOyBkZW55IGFsbDsgfQp9Cg==
 
 ```
+
+After running the list of current configurations will be available in `nms_nim_config_template_refs`
 
 License
 -------
