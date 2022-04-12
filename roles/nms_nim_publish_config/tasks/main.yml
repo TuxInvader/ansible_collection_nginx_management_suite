@@ -43,8 +43,10 @@
     register: nms_publish_result
     retries: 12
     delay: 5
-    until: nms_publish_result.json.details.success is not none
-    failed_when: nms_publish_result.json.details.failure is not none
+    until: (nms_publish_result.json.status is not none) and (nms_publish_result.json.status == "finalized")
+    failed_when: |
+       ((nms_publish_result.json.details.failure is not none) and (nms_publish_result.json.details.failure|length > 0) ) or
+       ((nms_publish_result.json.status is not none) and (nms_publish_result.json.status != "finalized" ))
 
   when: nms_nim_publish_wait == true
 
