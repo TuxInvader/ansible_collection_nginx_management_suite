@@ -46,45 +46,67 @@ Example Playbook
         - metadata:
             kind: role
             name: green
-            displayName: The Green Team (Devs)
+            displayName: The Green Team
+            description: Dev/Test Full
             tags:
               - dev
               - test
               - prod
           roleDef:
             permissions:
-              - access: WRITE
-                scope: INSTANCE-MANAGEMENT
-                tags:
-                  - env:dev
-                  - env:test
-              - access: READ
-                scope: INSTANCE-MANAGEMENT
-                tags:
-                  - env:prod
-              - access: WRITE
-                scope: SETTINGS
+              - accessTypes:
+                - CREATE
+                - READ
+                - UPDATE
+                - DELETE
+                feature: INSTANCE-MANAGEMENT
+                objects:
+                  - resource: Systems
+                    values:
+                    - nginx1
+              - accessTypes:
+                - CREATE
+                - UPDATE
+                - DELETE
+                - READ
+                feature: INSTANCE-GROUPS
+                objects:
+                  - resource: "Instance Groups"
+                    values:
+                    - AzureDev
+                    - AzureTest
+
         - metadata:
             kind: role
             name: red
-            displayName: The Red Team (Ops)
+            displayName: The Red Team
+            description: Production SRE
             tags:
               - dev
               - test
               - prod
           roleDef:
             permissions:
-              - access: READ
-                scope: INSTANCE-MANAGEMENT
-                tags:
-                  - env:test
-              - access: WRITE
-                scope: INSTANCE-MANAGEMENT
-                tags:
-                  - env:prod
-              - access: WRITE
-                scope: SETTINGS
-
+              - accessTypes:
+                - CREATE
+                - READ
+                - UPDATE
+                - DELETE
+                feature: INSTANCE-MANAGEMENT
+                objects:
+                  - resource: Systems
+                    values:
+                    - nginx2
+              - accessTypes:
+                - CREATE
+                - UPDATE
+                - DELETE
+                - READ
+                feature: INSTANCE-GROUPS
+                objects:
+                  - resource: "Instance Groups"
+                    values:
+                    - AzureProd
 
   - name: create NMS Roles
     include_role: 

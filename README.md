@@ -121,17 +121,27 @@ NIM Configuration Management
             - test
         roleDef:
           permissions:
-            - access: WRITE
-              scope: INSTANCE-MANAGEMENT
-              tags:
-                - env:dev
-                - env:test
-            - access: READ
-              scope: INSTANCE-MANAGEMENT
-              tags:
-                - env:prod
-            - access: WRITE
-              scope: SETTINGS
+            - accessTypes:
+              - CREATE
+              - READ
+              - UPDATE
+              - DELETE
+              feature: INSTANCE-MANAGEMENT
+              objects:
+                - resource: Systems
+                  values:
+                  - All
+            - accessTypes:
+              - CREATE
+              - UPDATE
+              - DELETE
+              - READ
+              feature: INSTANCE-GROUPS
+              objects:
+                - resource: "Instance Groups"
+                  values:
+                  - AzureDev
+                  - AzureTest
 ```
 
 ### RBAC Users
@@ -171,6 +181,8 @@ NIM Configuration Management
 
 ### Configuration Templates
 
+Upsert a configuration template called base-config.
+
 ```yaml
   - name: Create NIM Config Template
     include_role:
@@ -209,6 +221,9 @@ NIM Configuration Management
 
 ### Certificates
 
+This is example gets the instances list from NIM, and then uploads the certificate details
+in PEM format, and deploys it to the `nginx1` and `nginx2` instances.
+
 ```yaml
   - name: Get Instances
     include_role:
@@ -222,7 +237,7 @@ NIM Configuration Management
         name: NIM
         instanceRefs:
           - "{{ nms_instance_refs.nginx1.rel }}"
-          - "{{ nms_instance_refs.nginx1.rel }}"
+          - "{{ nms_instance_refs.nginx2.rel }}"
         certPEMDetails:
           type: PEM
           caCerts:
