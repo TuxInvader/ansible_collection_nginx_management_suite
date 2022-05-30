@@ -30,7 +30,7 @@
 - name: Wait for Publishing
   block:
 
-  - name: Wait for Configuration
+  - name: "Wait for Configuration... DeploymentUId: {{ nms_publish_response.json.deploymentUID | default('unknown') }}"
     uri:
       url: "https://{{ nms_fqdn }}{{ nms_publish_response.json.links.rel }}"
       method: GET
