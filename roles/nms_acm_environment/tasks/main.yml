@@ -1,0 +1,127 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_acm_workspace
+    - nms_acm_environment
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: GET ACM Environment status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_environment_status
+
+- name: Set nms_acm_environment fact
+  set_fact:
+    nms_acm_environment_refs: "{{ nms_acm_environment_refs | default({}) | combine({ item.name: item }, recursive=True) }}"
+  loop: "{{ nms_acm_environment_status.json['items'] }}"
+  
+- name: Create ACM Environment
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments"
+    method: POST
+    body: "{{ nms_acm_environment }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+      - 201
+      - 202
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_post_response
+  changed_when: nms_post_response.status in [201, 202]
+  when: nms_acm_environment_refs is undefined or nms_acm_environment_refs[ nms_acm_environment.name ] is undefined
+
+- name: Patch ACM Environment
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_acm_environment_refs[ nms_acm_environment.name ]._links.0.href }}"
+    method: PUT
+    body: "{{ nms_acm_environment }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+      - 201
+      - 202
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_put_response
+  changed_when: nms_put_response.status in [201, 202]
+  when: nms_acm_environment_refs[ nms_acm_environment.name ] is defined
+
+- name: Wait for Publishing
+  block:
+
+  - name: Set status fact
+    set_fact:
+      nms_publish_result: "{{ nms_post_response }}"
+    when: nms_post_response.changed
+
+  - name: Set status fact
+    set_fact:
+      nms_publish_result: "{{ nms_put_response }}"
+    when: nms_put_response.changed
+
+  - name: "Wait for Configuration... JobID: {{ nms_publish_result.json.configState.jobID | default('unknown') }}"
+    uri:
+      url: "https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments/{{ nms_acm_environment.name }}"
+      method: GET
+      return_content: true
+      status_code:
+        - 200
+        - 404
+      validate_certs: "{{ nms_validate_certs | default(false) }}"
+      headers: "{{ nms_auth_headers }}"
+    register: nms_publish_result
+    retries: 12
+    delay: 5
+    until: |
+      (nms_publish_result.json.configState is not none) and 
+      ( (nms_publish_result.json.configState.status in ["SUCCESS", "FAIL"]) or
+      (('errors' in nms_publish_result.json.configState) and (nms_publish_result.json.configState.errors|length > 0)) )
+    failed_when: |
+      (('errors' in nms_publish_result.json.configState) and (nms_publish_result.json.configState.errors|length > 0) ) or
+      ((nms_publish_result.json.configState.status is not none) and (nms_publish_result.json.configState.status == "FAIL" ))
+
+  when: nms_nim_publish_wait == true
+
+- name: GET ACM Environment status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_environment_status
+
+- name: Set nms_acm_environment fact
+  set_fact:
+    nms_acm_environment_refs: "{{ nms_acm_environment_refs | default({}) | combine({ item.name: item }, recursive=True) }}"
+  loop: "{{ nms_acm_environment_status.json['items'] }}"
+
+- name: GET ACM Environment status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments/{{ nms_acm_environment.name }}"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_environment_status
+

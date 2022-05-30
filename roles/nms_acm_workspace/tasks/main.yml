@@ -1,0 +1,86 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_acm_team
+    - nms_acm_workspace
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: GET ACM Workspace status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/{{ nms_acm_team }}/workspaces"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_workspace_status
+
+- name: Set nms_acm_workspace_refs fact
+  set_fact:
+    nms_acm_workspace_refs: "{{ nms_acm_workspace_refs | default({}) | combine({ (item.href | basename): item.href }, recursive=True) }}"
+  loop: "{{ nms_acm_workspace_status.json['_links'] }}"
+  
+- name: Create ACM Workspace
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/{{ nms_acm_team }}/workspaces"
+    method: POST
+    body: "{{ nms_acm_workspace }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 201
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_post_response
+  when: nms_acm_workspace_refs is undefined or nms_acm_workspace_refs[ nms_acm_workspace.name ] is undefined
+
+- name: Patch ACM Workspace
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_acm_workspace_refs[ nms_acm_workspace.name ] }}"
+    method: PUT
+    body: "{{ nms_acm_workspace }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+      - 201
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_put_response
+  when: nms_acm_workspace_refs[ nms_acm_workspace.name ] is defined
+
+- name: GET ACM Workspace status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/{{ nms_acm_team }}/workspaces"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_workspace_status
+
+- name: Set nms_acm_workspace_refs fact
+  set_fact:
+    nms_acm_workspace_refs: "{{ nms_acm_workspace_refs | default({}) | combine({ (item.href | basename): item.href }, recursive=True) }}"
+  loop: "{{ nms_acm_workspace_status.json['_links'] }}"
+
+- name: GET ACM Workspace status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/{{ nms_acm_team }}/workspaces/{{ nms_acm_workspace.name }}"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_workspace_status
+

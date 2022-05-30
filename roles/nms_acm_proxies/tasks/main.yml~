@@ -1,0 +1,129 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_acm_workspace
+    - nms_acm_proxies
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: GET ACM Workspace Proxy status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/proxies"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_proxy_status
+
+- name: Set nms_acm_proxy_refs fact
+  set_fact:
+    nms_acm_proxy_refs: "{{ nms_acm_proxy_refs | default({}) | combine({ (item.href | regex_replace('.*hostname=([^&]*)$', '\\1')) : item }, recursive=True) }}"
+  loop: "{{ nms_acm_proxy_status.json['_links'] }}"
+  
+- name: Create ACM Proxies
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/proxies"
+    method: POST
+    body: "{{ nms_acm_proxies }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+      - 201
+      - 202
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_post_response
+  changed_when: nms_post_response.status in [201, 202]
+  when: nms_acm_proxy_refs is undefined or nms_acm_proxy_refs[ nms_acm_proxies.proxyConfig.hostname ] is undefined
+
+- name: Patch ACM Environment
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/proxies/{{ nms_acm_proxies.name }}"
+    method: PUT
+    body: "{{ nms_acm_proxies }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+      - 201
+      - 202
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_put_response
+  changed_when: nms_put_response.status in [201, 202]
+  when: nms_acm_proxy_refs[ nms_acm_proxies.proxyConfig.hostname ] is defined
+
+- name: Wait for Publishing
+  block:
+
+  - name: "Get Current Configuration..."
+    uri:
+      url: "https://{{ nms_fqdn }}{{ nms_acm_proxy_refs[ nms_acm_proxies.proxyConfig.hostname ].href }}"
+      method: GET
+      return_content: true
+      status_code:
+        - 200
+        - 404
+      validate_certs: "{{ nms_validate_certs | default(false) }}"
+      headers: "{{ nms_auth_headers }}"
+    register: nms_publish_result
+
+  - name: "Wait for Configuration... JobID: {{ nms_publish_result.json.configs.0.configState.proxy.configState.jobID | default('unknown') }}"
+    uri:
+      url: "https://{{ nms_fqdn }}{{ nms_acm_proxy_refs[ nms_acm_proxies.proxyConfig.hostname ].href }}"
+      method: GET
+      return_content: true
+      status_code:
+        - 200
+        - 404
+      validate_certs: "{{ nms_validate_certs | default(false) }}"
+      headers: "{{ nms_auth_headers }}"
+    register: nms_publish_result
+    retries: 12
+    delay: 5
+    until: |
+      ( 'configState' in nms_publish_result.json.configs.0 ) and 
+      ( (nms_publish_result.json.configs.0.configState.proxy.configState.status in ["SUCCESS", "FAIL"]) or
+      (('errors' in nms_publish_result.json.configs.0.configState) and (nms_publish_result.json.configs.0.configState.errors|length > 0)) )
+    failed_when: |
+      (('errors' in nms_publish_result.json.configs.0.configState) and (nms_publish_result.json.configs.0.configState.errors|length > 0) ) or
+      ((nms_publish_result.json.configs.0.configState.proxy.configState.status is not none) and (nms_publish_result.json.configs.0.configState.proxy.configState.status == "FAIL" ))
+
+  when: nms_nim_publish_wait == true
+
+- name: GET ACM Proxy status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/environments"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_proxy_status
+
+- name: Set nms_acm_proxy_refs fact
+  set_fact:
+    nms_acm_proxy_refs: "{{ nms_acm_proxy_refs | default({}) | combine({ (item.href | basename) : item.href }, recursive=True) }}"
+  loop: "{{ nms_acm_proxy_status.json['_links'] }}"
+
+- name: GET ACM Environment status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/environments/{{ nms_acm_environment.name }}"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_environment_status
+
