@@ -67,6 +67,21 @@
 - name: Wait for Publishing
   block:
 
+  - name: GET ACM Workspace Proxy status
+    uri:
+      url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/proxies"
+      method: GET
+      status_code:
+        - 200
+      validate_certs: "{{ nms_validate_certs | default(false) }}"
+      headers: "{{ nms_auth_headers }}"
+    register: nms_acm_proxy_status
+
+  - name: Set nms_acm_proxy_refs fact
+    set_fact:
+      nms_acm_proxy_refs: "{{ nms_acm_proxy_refs | default({}) | combine({ (item.href | regex_replace('.*hostname=([^&]*)$', '\\1')) : item }, recursive=True) }}"
+    loop: "{{ nms_acm_proxy_status.json['_links'] }}"
+
   - name: "Wait for Configuration... "
     uri:
       url: "https://{{ nms_fqdn }}{{ nms_acm_proxy_refs[ nms_acm_proxies.proxyConfig.hostname ].href }}"
@@ -90,9 +105,9 @@
 
   when: nms_nim_publish_wait == true
 
-- name: GET ACM Proxy status
+- name: GET ACM Workspace Proxy status
   uri:
-    url: "https://{{ nms_fqdn }}{{ nms_acm_proxy_refs[ nms_acm_proxies.proxyConfig.hostname ].href }}"
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/proxies"
     method: GET
     status_code:
       - 200
@@ -105,3 +120,13 @@
     nms_acm_proxy_refs: "{{ nms_acm_proxy_refs | default({}) | combine({ (item.href | regex_replace('.*hostname=([^&]*)$', '\\1')) : item }, recursive=True) }}"
   loop: "{{ nms_acm_proxy_status.json['_links'] }}"
   
+- name: GET ACM Proxy status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_acm_proxy_refs[ nms_acm_proxies.proxyConfig.hostname ].href }}"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_proxy_status
+
