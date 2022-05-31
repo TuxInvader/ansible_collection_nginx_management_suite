@@ -1,0 +1,92 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_acm_workspace
+    - nms_acm_apidoc
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: GET ACM API-Doc status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/api-docs"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_apidoc_status
+
+- name: Set nms_acm_apidoc_refs fact
+  set_fact:
+    nms_acm_apidoc_refs: "{{ nms_acm_apidoc_refs | default({}) | combine({ item.name: item }, recursive=True) }}"
+  loop: "{{ nms_acm_apidoc_status.json['items'] }}"
+  
+- name: Create ACM API-Doc
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/api-docs"
+    method: POST
+    body: "{{ nms_acm_apidoc.spec | to_json }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+      - 201
+      - 202
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_post_response
+  changed_when: nms_post_response.status in [200, 201, 202]
+  when: nms_acm_apidoc_refs is undefined or nms_acm_apidoc_refs[ nms_acm_apidoc.name ] is undefined
+
+- name: Upsert ACM API-Doc
+  uri:
+    #url: "https://{{ nms_fqdn }}{{ nms_acm_apidoc_refs[ nms_acm_apidoc.name ].metadata.link.rel }}"
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/api-docs/{{ nms_acm_apidoc.name }}"
+    method: PUT
+    body: "{{ nms_acm_apidoc.spec | to_json }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+      - 201
+      - 202
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_put_response
+  changed_when: nms_put_response.status in [200, 201, 202]
+  when: nms_acm_apidoc_refs[ nms_acm_apidoc.name ] is defined
+
+- name: GET ACM API-Docs status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/api-docs"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_apidoc_status
+
+- name: Set nms_acm_apidoc_refs fact
+  set_fact:
+    nms_acm_apidoc_refs: "{{ nms_acm_apidoc_refs | default({}) | combine({ item.name: item }, recursive=True) }}"
+  loop: "{{ nms_acm_apidoc_status.json['items'] }}"
+  
+- name: GET ACM API-Docs status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/api-docs/{{ nms_acm_apidoc.name }}"
+    method: GET
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_acm_apidoc_status
+
