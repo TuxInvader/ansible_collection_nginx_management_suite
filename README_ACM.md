@@ -161,4 +161,32 @@ the ACM UI.
         - type: cors
 ```
 
+Example use of the bundle 
+```yaml
+  - name: Create F1 API Proxies
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_acm_proxies
+    vars:
+      nms_acm_workspace:
+        name: formula1
+      nms_acm_proxies:
+        name: f1-api
+        version: v1.0
+        specRef: f1-results-api-1
+        portalConfig:
+          targetProxyHost: devapi.foo.com
+          hostname: devportal.foo.com
+          category: ""
+        proxyConfig:
+          policies: "{{ nms_acm_policy_bundle }}"
+          hostname: devapi.foo.com
+          backends:
+          - serviceName: f1-svc
+            serviceTargets:
+            - hostname: f1api.internal.foo.com
+          ingress:
+            basePath: /api/f1
+```
+
+
 
