@@ -1,0 +1,20 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_acm_policies
+    - nms_acm_policies.policies
+
+- name: Clear nms_acm_policy_bundle fact
+  set_fact:
+    nms_acm_policy_bundle: {}
+  when: nms_acm_policies.new is defined and nms_acm_policies.new == True
+  
+- name: Build the policy bundle
+  include_tasks: policy.yml
+  loop: "{{ nms_acm_policies.policies }}"
+  loop_control:
+    loop_var: policy
+
