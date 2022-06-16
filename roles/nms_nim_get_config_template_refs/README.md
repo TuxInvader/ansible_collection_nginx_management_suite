@@ -1,7 +1,7 @@
 NMS Licensing
 =============
 
-NGINX Managment Suite (NMS) Ansible role for getting the list of stored config templates
+NGINX Management Suite (NMS) Ansible role for getting the list of stored config templates
 
 
 Requirements
