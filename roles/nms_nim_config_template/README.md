@@ -1,7 +1,7 @@
 NMS Licensing
 =============
 
-NGINX Managment Suite (NMS) Ansible role for creating NGINX configs
+NGINX Management Suite (NMS) Ansible role for creating NGINX configs
 
 
 Requirements

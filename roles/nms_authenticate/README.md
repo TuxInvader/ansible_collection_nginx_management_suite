@@ -1,7 +1,7 @@
 NMS Authentication
 ==================
 
-NGINX Managment Suite (NMS) Ansible role for configuring the API Authentication
+NGINX Management Suite (NMS) Ansible role for configuring the API Authentication
 
 
 Requirements

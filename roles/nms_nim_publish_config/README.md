@@ -1,7 +1,7 @@
 NMS Licensing
 =============
 
-NGINX Managment Suite (NMS) Ansible role for publishing configuration through NIM
+NGINX Management Suite (NMS) Ansible role for publishing configuration through NIM
 
 
 Requirements

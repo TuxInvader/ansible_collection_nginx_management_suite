@@ -1,7 +1,7 @@
 NMS Licensing
 =============
 
-NGINX Managment Suite (NMS) Ansible role for getting the list of instances
+NGINX Management Suite (NMS) Ansible role for getting the list of instances
 
 
 Requirements

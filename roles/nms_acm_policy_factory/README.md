@@ -1,7 +1,7 @@
 NMS Licensing
 =============
 
-NGINX Managment Suite (NMS) Ansible role to help building ACM policies
+NGINX Management Suite (NMS) Ansible role to help building ACM policies
 
 This role takes in a list of policies, and sets a fact called `nms_acm_policy_bundle` which
 contains the policies using the provided params and/or the same defaults as the ACM UI.
