@@ -1,0 +1,63 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_validate_certs
+
+- name: Check for Agent installation
+  stat:
+    path: /etc/nginx-agent/nginx-agent.conf
+  register: agent_conf_file
+  
+- name: Ensure Agent is installed
+  block:
+
+    - name: Create temp installer file
+      tempfile:
+        state: file
+        prefix: nginx-agent-installer
+      register: agent_tempfile
+
+    - name: Download the Agent installer script
+      uri:
+        url: "https://{{ nms_fqdn }}/install/nginx-agent"
+        method: GET
+        return_content: true
+        status_code:
+          - 200
+        validate_certs: "{{ nms_validate_certs | default(false) }}"
+        dest: "{{ agent_tempfile.path }}"
+      register: agent_install_dl
+
+    - name: Run the installer script
+      command:
+        argv:
+        - /bin/sh
+        - "{{  agent_tempfile.path }}"
+      become: true
+      become_method: sudo
+      become_user: root
+      notify: Restart Agent
+
+  when: agent_conf_file.stat.islnk is not defined
+
+- name: Set the instance group
+  lineinfile:
+    path: /etc/nginx-agent/agent-dynamic.conf
+    state: present
+    regexp: "^instance_group:.*"
+    line: "instance_group: {{ nms_agent_instance_group }}"
+  when: nms_agent_instance_group is defined and nms_agent_instance_group | length > 0
+  become: true
+  notify: Restart Agent
+
+- name: Ensure Agent is running and enabled
+  systemd:
+    name: nginx-agent.service
+    enabled: true
+    state: started
+  become: true
+

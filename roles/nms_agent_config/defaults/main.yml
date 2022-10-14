@@ -1,0 +1,5 @@
+---
+# defaults file for NMS Roles
+nms_agent_force_install: false
+nms_validate_certs: false
+
