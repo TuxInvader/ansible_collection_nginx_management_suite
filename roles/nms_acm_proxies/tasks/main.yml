@@ -76,6 +76,11 @@
       validate_certs: "{{ nms_validate_certs | default(false) }}"
       headers: "{{ nms_auth_headers }}"
     register: nms_acm_proxy_status
+    retries: 12
+    delay: 5
+    until: |
+      ( '_links' in nms_acm_proxy_status.json ) and
+      ( nms_acm_proxy_status.json._links | length > 0 )
 
   - name: Set nms_acm_proxy_refs fact
     set_fact:
