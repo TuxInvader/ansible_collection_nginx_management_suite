@@ -79,7 +79,7 @@
 
   - name: "Wait for Configuration... JobID: {{ nms_publish_result.json.configState.jobID | default('unknown') }}"
     uri:
-      url: "https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments/{{ nms_acm_environment.name }}"
+      url: "https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments/{{ nms_acm_environment.name }}/jobs/{{nms_publish_result.json.configState.jobID}}"
       method: GET
       return_content: true
       status_code:
@@ -88,15 +88,14 @@
       validate_certs: "{{ nms_validate_certs | default(false) }}"
       headers: "{{ nms_auth_headers }}"
     register: nms_publish_result
-    retries: 12
-    delay: 5
+    retries: 60
+    delay: 10
     until: |
-      (nms_publish_result.json.configState is not none) and 
-      ( (nms_publish_result.json.configState.status in ["SUCCESS", "FAIL"]) or
-      (('errors' in nms_publish_result.json.configState) and (nms_publish_result.json.configState.errors|length > 0)) )
+      ( (nms_publish_result.json.status in ["SUCCESS", "FAIL"]) or
+      (('errors' in nms_publish_result.json) and (nms_publish_result.json.errors|length > 0)) )
     failed_when: |
-      (('errors' in nms_publish_result.json.configState) and (nms_publish_result.json.configState.errors|length > 0) ) or
-      ((nms_publish_result.json.configState.status is not none) and (nms_publish_result.json.configState.status == "FAIL" ))
+      (('errors' in nms_publish_result.json) and (nms_publish_result.json.errors|length > 0) ) or
+      (nms_publish_result.json.status != "SUCCESS")
 
   when: nms_nim_publish_wait == true
 
