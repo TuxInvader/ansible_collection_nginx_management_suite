@@ -76,8 +76,22 @@ Example Playbook
           - serviceName: f1-svc
             serviceTargets:
             - hostname: f1.foo.com
+              listener:
+                enableTLS: false
+                port: 80
+                transportProtocol: HTTP
           ingress:
             basePath: /api/f1
+            basePathVersionAppendRule: SUFFIX
+          policies:
+            proxy-request-headers:
+            - action:
+                proxyHeaders:
+                  proxyDefaultHeadersToBackend: false
+                  proxyCustomHeadersToBackend:
+                  - key: Host
+                    value: stringValue.override-my-f1-host-header.nginx.local
+                    isSensitive: False
 
 ```
 
