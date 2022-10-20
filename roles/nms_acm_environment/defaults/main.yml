@@ -1,7 +1,7 @@
 ---
 # defaults file for NMS Roles
 nms_auth_type: "basic"
-nms_api_version: "/api/v1"
+nms_api_version: "/api/acm/v1"
 nms_validate_certs: false
 nms_license_force: false
 nms_nim_publish_wait: true
