@@ -1,0 +1,148 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_validate_certs
+    - nms_acm_devportal_db
+
+- name: Install Postgres DB (Debian/Ubuntu)
+  block:
+
+  - name: Install postgres package
+    ansible.builtin.apt:
+      name: postgresql
+      state: present
+
+  - name: Setup the pg_hba config
+    copy:
+      dest: /etc/postgresql/12/main/pg_hba.conf
+      mode: 0644
+      owner: root
+      content: |
+        local all postgres peer
+        local all all md5
+        # IPv4 local connections:
+        host all all 127.0.0.1/32 md5
+        # IPv6 local connections:
+        host all all ::1/128 md5
+    notify: Restart Postgres
+
+  become: true
+  when:
+  - ansible_os_family == "Debian"
+  - nms_acm_devportal_db == "postgres"
+
+- name: Install Postgres DB (RHEL/YUM)
+  block:
+
+  - name: Install postgres package
+    ansible.builtin.yum:
+      name: postgresql-server
+      state: present
+
+  - name: Initialize the DB
+    ansible.builtin.command:
+      cmd: postgresql-setup initdb
+
+  - name: Setup the pg_hba config
+    copy:
+      dest: /var/lib/pgsql/data/pg_hba.conf
+      mode: 0644
+      owner: root
+      content: |
+        local all postgres peer
+        local all all md5
+        # IPv4 local connections:
+        host all all 127.0.0.1/32 md5
+        # IPv6 local connections:
+        host all all ::1/128 md5
+    notify: Restart Postgres
+
+  become: true
+  when:
+  - ansible_os_family == "RedHat"
+  - nms_acm_devportal_db == "postgres"
+
+- name: Setup the NMS repo (Debian/Ubuntu)
+  block:
+
+  - name: Create the NMS soures file
+    copy:
+      dest: /etc/apt/sources.list.d/nms.list
+      mode: 0644
+      owner: root
+      group: root
+      content: "deb https://pkgs.nginx.com/nms/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} nginx-plus\n"
+    become: true
+
+  - name: Create the apt-config for NGINX repos
+    copy:
+      dest: /etc/apt/apt.conf.d/90pkgs-nginx
+      mode: 0644
+      owner: root
+      group: root
+      content: |
+        Acquire::https::pkgs.nginx.com::Verify-Peer "true";
+        Acquire::https::pkgs.nginx.com::Verify-Host "true";
+        Acquire::https::pkgs.nginx.com::SslCert     "/etc/ssl/nginx/nginx-repo.crt";
+        Acquire::https::pkgs.nginx.com::SslKey      "/etc/ssl/nginx/nginx-repo.key";
+    become: true
+
+  - name: Import the NMS key
+    ansible.builtin.apt_key:
+      url: https://cs.nginx.com/static/keys/nginx_signing.key
+      state: present
+    become: true
+
+  - name: Update the apt cache
+    ansible.builtin.apt:
+      update_cache: yes
+    become: true
+
+  when: ansible_os_family == "Debian"
+
+- name: Install the DevPortal packages
+  ansible.builtin.package:
+    name:
+    - nginx-devportal
+    - nginx-devportal-ui
+    state: present
+  become: true
+
+- name: Initialize the DB
+  block:
+
+  - name: Setup the devportal DB
+    ansible.builtin.shell: |
+      su - postgres -c 'createdb devportal'
+      su - postgres -c "psql -c \"CREATE USER nginxdm WITH LOGIN PASSWORD 'nginxdm';\""
+      su - postgres -c 'psql -c "GRANT ALL PRIVILEGES ON DATABASE devportal TO nginxdm;"'
+    notify: Restart Postgres
+    become: true
+
+  when:
+  - nms_acm_devportal_db == "postgres"
+  - nms_acm_devportal_db_init == true
+
+- name: Switch Devportal to SQLite Database
+  block:
+
+  - name: set DB_TYPE
+    lineinfile:
+      path: /etc/nginx-devportal/devportal.conf
+      state: present
+      regexp: "^DB_TYPE=.*"
+      line: 'DB_TYPE="sqlite"'
+    
+  - name: set DB_PATH
+    lineinfile:
+      path: /etc/nginx-devportal/devportal.conf
+      state: present
+      regexp: "^DB_PATH=.*"
+      line: 'DB_PATH="/var/lib/nginx-devportal"'
+    
+  when: nms_acm_devportal_db == "sqlite"
+
