@@ -1,0 +1,28 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_sm_policy
+    - nms_sm_policy.metadata.name
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: Perform Policy Deletion
+  include_tasks: delete.yml
+  when: nms_sm_policy_state == "absent"
+
+- name: Perform Policy Upsert
+  include_tasks: upsert.yml
+  when: nms_sm_policy_state == "present"
+
+- name: Update Status
+  include_tasks: get_status.yml
+
