@@ -1,0 +1,61 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ({{ item }} is defined) and ({{ item }} | string | length > 0)
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: GET all NMS-SM Log Profile status (no-content)
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/security/logprofiles?includeLogProfileContent={{ nms_sm_logprofile_include_content }}"
+    method: GET
+    status_code:
+      - 200
+      - 404
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_sm_logprofile_status
+
+- name: Reset nms_sm_logprofile_refs fact
+  set_fact:
+    nms_sm_logprofile_refs: {}
+
+- name: Set nms_sm_logprofile_refs fact
+  set_fact:
+    nms_sm_logprofile_refs: "{{ nms_sm_logprofile_refs | default({}) | combine({ item.metadata.name: item |
+                        combine({ 'rel': nms_api_version ~ '/security/logprofiles/' ~ item.metadata.name})}, recursive=True) }}"
+  loop: "{{ nms_sm_logprofile_status.json['items'] }}"
+  when: nms_sm_logprofile_decode_content is false
+
+- name: Set nms_sm_logprofile_refs fact
+  set_fact:
+    nms_sm_logprofile_refs: "{{ nms_sm_logprofile_refs | default({}) | combine({ item.metadata.name: item |
+                        combine({'logProfileContent': (item.logProfileContent | b64decode | from_json),
+                        'rel': nms_api_version ~ '/security/logprofiles/' ~ item.metadata.name})}, recursive=True) }}"
+  loop: "{{ nms_sm_logprofile_status.json['items'] }}"
+  when: nms_sm_logprofile_decode_content
+
+- name: GET NMS-SM Log Profile status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_sm_logprofile_refs[ nms_sm_logprofile.metadata.name ].rel }}"
+    method: GET
+    status_code:
+      - 200
+      - 404
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_sm_logprofile_status
+  when: 
+  - nms_sm_logprofile is defined
+  - nms_sm_logprofile['metadata'] is defined
+  - nms_sm_logprofile['metadata']['name'] is defined
+  - nms_sm_logprofile_refs[ nms_sm_logprofile['metadata']['name'] ] is defined
+
