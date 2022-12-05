@@ -1,5 +1,13 @@
 ---
 
+- name: Fail if required variables are not defined
+  assert:
+    that: ({{ item }} is defined) and ({{ item }} | string | length > 0)
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+
 - name: GET all NMS-SM Policy status (no-content)
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_api_version }}/security/policies?includePolicyContent={{nms_sm_policy_include_content}}"
