@@ -54,15 +54,29 @@
   become: true
   notify: Restart Agent
 
-- name: Enable NAP data collection
-  blockinfile:
-    path: /etc/nginx-agent/nginx-agent.conf
-    block: |
-      nginx_app_protect:
-        report_interval: {{nms_agent_nap_collection_seconds}}s
-  when: nms_agent_nap_collection_seconds > 0
-  become: true
-  notify: Restart Agent
+- name: Setup Agent for NAP
+  block:
+
+  - name: Enable NAP data collection
+    blockinfile:
+      path: /etc/nginx-agent/nginx-agent.conf
+      block: |
+        nginx_app_protect:
+          report_interval: {{nms_agent_nap_collection_seconds}}s
+    become: true
+    notify: Restart Agent
+
+  - name: Ensure /etc/app_protect is included in config_dirs
+    lineinfile:
+      path: /etc/nginx-agent/nginx-agent.conf
+      backrefs: yes
+      state: present
+      regexp: '^config_dirs:(\s*)"(((?!/etc/app_protect).)*)"'
+      line: 'config_dirs:\1"\2:/etc/app_protect"'
+    become: true
+    notify: Restart Agent
+
+  when: nms_agent_nap_enable
 
 - name: Ensure Agent is running and enabled
   systemd:
