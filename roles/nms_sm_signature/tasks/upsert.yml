@@ -1,0 +1,37 @@
+---
+
+- name: Locate Existing Policies
+  import_tasks: get_status.yml
+
+# NMS doesn't support Content-Transfer-Encoding as used by the uri module.
+#
+#- name: Upsert NMS-SM Security Policy
+#  uri:
+#    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/security/{{ nms_sm_api_paths[nms_sm_signature_type] }}"
+#    method: POST
+#    body_format: form-multipart
+#    body:
+#      revisionTimestamp: "{{ nms_sm_signature.revisionTimestamp }}"
+#      filename:
+#        filename: "{{nms_sm_signature.filename}}"
+#        mime_type: "application/octet-stream"
+#    return_content: true
+#    status_code:
+#      - 201
+#    validate_certs: "{{ nms_validate_certs | default(false) }}"
+#    headers: "{{ nms_auth_headers }}"
+#  register: response
+#  changed_when: response.status == 201
+#  when: nms_sm_signature_refs is undefined or nms_sm_signature_refs[nms_sm_signature.revisionTimestamp] is undefined
+
+- name: Upsert NMS-SM Security Policy
+  nms_sm_uploader:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/security/{{ nms_sm_api_paths[nms_sm_signature_type] }}"
+    revisionTimestamp: "{{ nms_sm_signature.revisionTimestamp }}"
+    source: "{{ nms_sm_signature_source }}"
+    filename: "{{ nms_sm_signature.filename }}"
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers | to_json }}"
+  register: response
+  changed_when: response.status == 201
+  when: nms_sm_signature_refs is undefined or nms_sm_signature_refs[nms_sm_signature.revisionTimestamp] is undefined

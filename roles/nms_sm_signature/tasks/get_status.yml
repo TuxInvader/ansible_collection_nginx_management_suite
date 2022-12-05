@@ -1,0 +1,23 @@
+---
+
+- name: GET all NMS-SM Signatures
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/security/{{ nms_sm_api_paths[nms_sm_signature_type] }}"
+    method: GET
+    status_code:
+      - 200
+      - 404
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_sm_signature_status
+
+- name: Reset nms_sm_signature_refs fact
+  set_fact:
+    nms_sm_signature_refs: {}
+
+- name: Set nms_sm_signature_refs fact
+  set_fact:
+    nms_sm_signature_refs: "{{ nms_sm_signature_refs | default({}) | combine({ item.revisionTimestamp: ( item |
+                            combine({'rel': nms_api_version ~ '/security/{{ nms_sm_api_paths[nms_sm_signature_type] }}/' ~ item.uid}, recursive=True))}) }}"
+  loop: "{{ nms_sm_signature_status.json['items'] }}"
+

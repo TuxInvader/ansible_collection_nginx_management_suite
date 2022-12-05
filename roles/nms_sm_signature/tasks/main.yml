@@ -1,0 +1,59 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ( {{ item }} is defined ) and ( {{ item }} | string | length > 0 )
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_sm_signature_source
+    - nms_sm_signature_type
+    - nms_sm_signature
+
+- name: Fail if source is set incorrectly
+  assert:
+    that: "{{ nms_sm_signature_source in ['local','remote']}}" 
+    fail_msg: "nms_sm_signature_source should be 'local' or 'remote'"
+
+- name: Fail if type is set incorrectly
+  assert:
+    that: "{{ nms_sm_signature_type in ['sig','threat']}}" 
+    fail_msg: "nms_sm_signature_type should be 'sig' or 'threat'"
+
+- name: Fail if local source variables are missing
+  assert:
+    that: ( {{ item }} is defined ) and ( {{ item }} | string | length > 0 )
+  loop:
+    - nms_sm_signature.filename
+  when: nms_sm_signature_source == 'local'
+
+- name: Fail if remote source variables are missing
+  assert:
+    that: ( {{ item }} is defined ) and ( {{ item }} | string | length > 0 )
+  loop:
+    - nms_sm_signature.nim_host
+  when: nms_sm_signature_source == 'remote'
+
+- name: Set API paths for signatures
+  set_fact:
+    nms_sm_api_paths:
+      sig: attack-signatures
+      threat: threat-campaigns
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: Perform Signature Deletion
+  include_tasks: delete.yml
+  when: nms_sm_signature_state == "absent"
+
+- name: Perform Policy Upsert
+  include_tasks: upsert.yml
+  when: nms_sm_signature_state == "present"
+
+- name: Update Status
+  include_tasks: get_status.yml
+
