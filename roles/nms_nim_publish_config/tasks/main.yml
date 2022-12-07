@@ -7,18 +7,78 @@
     - nms_fqdn
     - nms_api_version
     - nms_validate_certs
-    - nms_nim_publish
+
+- name: Fail if we have no config
+  fail:
+    fail_msg: "You must provide a data structure in nms_nim_publish"
+  when: nms_nim_publish is not defined
 
 - name: Check NMS Authentication
   fail:
     msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
   when: nms_auth_headers is undefined
 
+# Copy the config from the variable into a local fact for manipulation
+- name: Set config fact
+  set_fact:
+    post_config: "{{ nms_nim_publish.config }}"
+
+# If nms_nim_publish_encode_content is set, then expect the content to be raw and base64encode it before sending
+- name: Encode file contents
+  block:
+
+  - name: Set config fact
+    set_fact:
+      post_config: "{{ nms_nim_publish.config | combine({ 'configFiles': {'files': []}, 'auxFiles': {'files': []}}, recursive=True) }}"
+
+  - name: Encode each config file
+    set_fact: 
+      post_config: "{{  post_config | combine({ 'configFiles': {'files': [ {'contents': (file.contents|b64encode), 'name': file.name }]}}, list_merge='append', recursive=True) }}"
+    loop: "{{ nms_nim_publish.config.configFiles.files }}"
+    loop_control:
+      loop_var: file
+    when: 
+    - nms_nim_publish.config.configFiles is defined
+    - nms_nim_publish.config.configFiles.files is defined
+
+  - name: Encode each aux file
+    set_fact: 
+      post_config: "{{  post_config | combine({ 'auxFiles': {'files': [ {'contents': (file.contents|b64encode), 'name': file.name }]}}, list_merge='append', recursive=True) }}"
+    loop: "{{ nms_nim_publish.config.auxFiles.files }}"
+    loop_control:
+      loop_var: file
+    when: 
+    - nms_nim_publish.config.auxFiles is defined
+    - nms_nim_publish.config.auxFiles.files is defined
+
+  when: nms_nim_publish_encode_content
+
+# If the user has suppplied a config, then we also need to set updateTime, set it to `now` if it isn't set in the config
+- name: Update Timestamp
+  set_fact:
+    post_config: "{{ post_config | combine({ 'updateTime': ( '%Y-%m-%dT%H:%M:%S.000Z' | strftime(ansible_facts.date_time.epoch))}, recursive=True) }}"
+  when:
+  - nms_nim_publish.config.configFiles is defined
+  - nms_nim_publish.config.updateTime is undefined
+
+# Should we ignore conflicts when publishing? Only set this if it isn't provided in the dictionary
+- name: Set ignore conflict preference
+  set_fact:
+    post_config: "{{ post_config | combine({ 'ignoreConflict': nms_nim_publish_ignore_conflict }, recursive=True) }}"
+  when: nms_nim_publish.config.ignoreConflict is undefined
+
+# Should we validate the config when publishing? Only set this if it isn't provided in the dictionary
+- name: Set validate config preference
+  set_fact:
+    post_config: "{{ post_config | combine({ 'validateConfig': nms_nim_publish_validate_config }, recursive=True) }}"
+  when: nms_nim_publish.config.validateConfig is undefined
+
+
 - name: Publish Configuration
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_nim_publish.rel }}/config"
     method: POST
-    body: "{{ nms_nim_publish.config }}"
+    body: "{{ post_config }}"
     body_format: json
     return_content: true
     status_code:
