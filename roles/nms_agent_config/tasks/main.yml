@@ -63,6 +63,11 @@
       block: |
         nginx_app_protect:
           report_interval: {{nms_agent_nap_collection_seconds}}s
+        nap_monitoring:
+          collector_buffer_size: 50000
+          processor_buffer_size: 50000
+          syslog_ip: "127.0.0.1"
+          syslog_port: 514
     become: true
     notify: Restart Agent
 
