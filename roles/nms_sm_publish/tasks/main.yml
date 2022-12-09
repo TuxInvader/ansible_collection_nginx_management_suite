@@ -1,0 +1,34 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ({{ item }} is defined) and ({{ item }} | string | length > 0)
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_sm_publish
+    - nms_sm_publish.attackSignatureLibrary
+    - nms_sm_publish.threatCampaign
+    - nms_sm_publish.policyContent
+
+- name: Fail if we have not publication targets
+  ansible.builtin.fail:
+    msg: "nms_sm_publish needs atleast one target. Please provide: 'instances' or 'instanceGroups'"
+  when:
+  - nms_sm_publish.instances is undefined
+  - nms_sm_publish_instances is undefined
+  - nms_sm_publish.instanceGroups is undefined
+  - nms_sm_publish_instanceGroups is undefined
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: Perform Policy Publication
+  include_tasks: upsert.yml
+
+- name: Update Status
+  include_tasks: get_status.yml
+
