@@ -67,7 +67,7 @@
           collector_buffer_size: 50000
           processor_buffer_size: 50000
           syslog_ip: "127.0.0.1"
-          syslog_port: 514
+          syslog_port: "{{ nms_agent_nap_syslog_port }}"
     become: true
     notify: Restart Agent
 
