@@ -11,10 +11,19 @@ Requirements
 Role Variables
 --------------
 
-`nms_fqdn`
-`nms_validate_certs`
-`nms_agent_instance_group`
-`nms_agent_force_install`
+* `nms_fqdn`
+* `nms_validate_certs`
+* `nms_agent_instance_group`
+
+NAP Settings
+* `nms_agent_nap_enable` (default - false)
+* `nms_agent_nap_syslog_port` (default = 514)
+* `nms_agent_nap_collection_seconds` (default = 15)
+
+DevPortal Settings for ACM
+* `nms_acm_devportal` (default = false)
+* `nms_acm_devportal_db` (default = postgres)
+* `nms_acm_devportal_db_init` (default = true)
 
 Dependencies
 ------------
@@ -32,7 +41,6 @@ Example Playbook
     nms_fqdn: "ngx-ctrl.mydomain.com"
     nms_validate_certs: false
     nms_agent_instance_group: prod_api_gateways
-    nms_agent_force_install: true
 
   tasks:
 

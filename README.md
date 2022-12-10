@@ -10,6 +10,7 @@ Then use in a playbook...
 
 - hosts: localhost
   gather_facts: no
+  connection: local
 
   vars_files:
     - ~/src/ansible_nim_secrets.yaml
@@ -55,23 +56,36 @@ There are some additional variables which control the behaviour, but they have d
 
 ## Example tasks
 
-NSM/NIM Management
+### RBAC
+
+The NMS RBAC system is made up of three components (roles, users, and groups).
+
+**Roles**: A collection of permissions for one or more features. The definition also includes the list of actions (CRUD) that can be performed for that feature.
+
+**Users**: A username and set of credentials, these can be created in NMS itself or added come from an external identity provider (idP)
+
+**Groups**: A collection of users. Groups are only used with an external idP to confer role permissions to members.
+
+* [RBAC Roles](#rbac-roles)
+* [RBAC Users](#rbac-users)
+* [RBAC Groups](#rbac-groups)
+
+### NSM/NIM Management
 
 * [Licensing](#licensing)
-* [RBAC Tag Systems](#rbac-tag-systems)
-* [RBAC User Roles](#rbac-user-roles)
-* [RBAC Users](#rbac-users)
+* [Agent Install / Configuration](#agent-install--configuration)
+* [Tagging Systems](#tagging-systems-not-used-for-rbac)
 * [Instance Groups](#instance-groups)
 
-NIM Configuration Management
+### NIM Configuration Management
 * [Configuration Templates](#configuration-templates)
 * [Certificates](#certificates)
 * [Publish Configuration](#publish-configuration)
 
-NMS API 
+### NMS API 
 * [ACM-Configurations](./README_ACM.md)
 
-### Licensing
+## Licensing
 
 ```yaml
   - name: License NMS
@@ -80,8 +94,35 @@ NMS API
     vars:
       nms_license: "{{ lookup('file', /home/mark/nms_license.txt') }}"
 ```
+## Agent Install / Configuration
 
-### RBAC Tag Systems
+NMS uses an agent to manage deployed nginx instances. Unlike most of the other roles in this collection (which interact with the NMS API), this role cannot be run on `localhost` and should instead target the NGINX systems directly.
+
+```yaml
+- hosts: nginx
+  gather_facts: yes
+
+  vars:
+    nms_fqdn: "nim1.mydomain.com"
+    nms_validate_certs: false
+    nms_agent_nap_enable: true
+    nms_agent_nap_collection_seconds: 15
+    nms_agent_nap_syslog_port: 5514
+
+  tasks:
+
+  - name: Setup Agent on API Gateways
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_agent_config
+```
+
+There are additional variables which can be defined to enable NAP management, and for use with the ACM module to create proxies, and enable developer portal configuration. 
+
+See the [nms_agent_config Documentation](/roles/nms_agent_config/README.md) for more information.
+
+## Tagging Systems (Not Used for RBAC)
+
+In early versions of NMS we used system tags as a way to apply RBAC rules. This is no longer the case, but you can still tag systems if you wish.
 
 ```yaml
   - name: Tag Systems
@@ -107,7 +148,7 @@ NMS API
       loop_var: nms_system
 ```
 
-### RBAC User Roles
+## RBAC Roles
 
 ```yaml
   - name: Create NMS Role
@@ -147,7 +188,7 @@ NMS API
                   - AzureTest
 ```
 
-### RBAC Users
+## RBAC Users
 
 ```yaml
   - name: Create the user for Developer Debbie
@@ -168,8 +209,13 @@ NMS API
           roles:
             - ref: /api/platform/v1/roles/green
 ```
+## RBAC Groups
 
-### Instance Groups
+TODO
+```yaml
+```
+
+## Instance Groups
 
 ```yaml
   - name: Setup Instance Group with NMS
@@ -182,7 +228,7 @@ NMS API
         displayName: AzureProd
 ```
 
-### Configuration Templates
+## Configuration Templates
 
 Upsert a configuration template called base-config.
 
@@ -222,7 +268,7 @@ Upsert a configuration template called base-config.
               I30K
 ```
 
-### Certificates
+## Certificates
 
 This is example gets the instances list from NIM, and then uploads the certificate details
 in PEM format, and deploys it to the `nginx1` and `nginx2` instances.
@@ -264,7 +310,7 @@ in PEM format, and deploys it to the `nginx1` and `nginx2` instances.
             -----END PRIVATE KEY-----
 ```
 
-### Publish Configuration
+## Publish Configuration
 
 This example retrieves the `Instance Groups` and `Configuration Templates`, and then
 applies the `basic-config` template to the `production` instance group.
