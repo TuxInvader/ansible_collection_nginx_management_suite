@@ -1,4 +1,4 @@
-NMS Licensing
+NMS Agent Configuration
 =============
 
 NGINX Management Suite (NMS) Ansible role for configuring the Agent 

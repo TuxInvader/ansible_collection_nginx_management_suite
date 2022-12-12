@@ -56,9 +56,14 @@ There are some additional variables which control the behaviour, but they have d
 
 ## Example tasks
 
+----
 ### RBAC
 
 The NMS RBAC system is made up of three components (roles, users, and groups).
+
+* [RBAC Roles](#rbac-roles)
+* [RBAC Users](#rbac-users)
+* [RBAC Groups](#rbac-groups)
 
 **Roles**: A collection of permissions for one or more features. The definition also includes the list of actions (CRUD) that can be performed for that feature.
 
@@ -66,10 +71,7 @@ The NMS RBAC system is made up of three components (roles, users, and groups).
 
 **Groups**: A collection of users. Groups are only used with an external idP to confer role permissions to members.
 
-* [RBAC Roles](#rbac-roles)
-* [RBAC Users](#rbac-users)
-* [RBAC Groups](#rbac-groups)
-
+----
 ### NSM/NIM Management
 
 * [Licensing](#licensing)
@@ -77,14 +79,22 @@ The NMS RBAC system is made up of three components (roles, users, and groups).
 * [Tagging Systems](#tagging-systems-not-used-for-rbac)
 * [Instance Groups](#instance-groups)
 
+----
 ### NIM Configuration Management
-* [Configuration Templates](#configuration-templates)
+* [Staged Configurations](#staged-configurations)
 * [Certificates](#certificates)
-* [Publish Configuration](#publish-configuration)
+* [Publish Staged Configuration](#publish-staged-configuration)
+* [Publish Direct Configuration](#publish-direct-configuration)
 
-### NMS API 
-* [ACM-Configurations](./README_ACM.md)
+----
+### NMS API Connectivity Manager (ACM)
+* [ACM Configuration](./README_ACM.md)
 
+----
+### NMS Security Module (SM)
+* [NMS-SM Configuration](./README_SM.md)
+
+----
 ## Licensing
 
 ```yaml
@@ -228,9 +238,9 @@ TODO
         displayName: AzureProd
 ```
 
-## Configuration Templates
+## Staged Configurations
 
-Upsert a configuration template called base-config.
+Upsert a configuration template (Staged Configuration) called base-config.
 
 ```yaml
   - name: Create NIM Config Template
@@ -310,7 +320,7 @@ in PEM format, and deploys it to the `nginx1` and `nginx2` instances.
             -----END PRIVATE KEY-----
 ```
 
-## Publish Configuration
+## Publish Staged Configuration
 
 This example retrieves the `Instance Groups` and `Configuration Templates`, and then
 applies the `basic-config` template to the `production` instance group.
@@ -335,7 +345,10 @@ applies the `basic-config` template to the `production` instance group.
 
 ```
 
+## Publish Direct Configuration
+
 This example pushes a configuration directly to an instance not using a template
+
 ```yaml
   - name: Publish a config ddirectly to an instance
     include_role:
@@ -373,4 +386,78 @@ This example pushes a configuration directly to an instance not using a template
                 I30K
 ```
 
+Another direct publishing example, but with a clear text configuration. The variable `nms_nim_publish_encode_content` enables
+Base64 encoding of the file contents before upserting to the NMS API.
+
+```yaml
+  - name: Create NIM Config Template
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_nim_publish_config
+    vars:
+      nms_nim_publish_decode_content: true
+      nms_nim_publish_encode_content: true
+      nms_nim_publish_ignore_conflict: true
+      nms_nim_publish_validate_config: false
+      nms_nim_publish:
+        config:
+          auxFiles:
+            files:
+            - name: /etc/app_protect/conf/log_default.json
+              contents: |
+                {
+                  "filter": {
+                      "request_type": "illegal"
+                  },
+
+                  "content": {
+                      "format": "default",
+                      "max_request_size": "any",
+                      "max_message_size": "5k"
+                  }
+                }
+            rootDir: /
+          configFiles:
+            files:
+            - name: /etc/nginx/nginx.conf
+              contents: |
+                user  nginx;
+                worker_processes  auto;
+
+                error_log  /var/log/nginx/error.log notice;
+                pid        /var/run/nginx.pid;
+
+                load_module modules/ngx_http_js_module.so;
+                load_module modules/ngx_http_app_protect_module.so;
+
+                events {
+                    worker_connections  1024;
+                }
+
+
+                http {
+                    include       /etc/nginx/mime.types;
+                    default_type  application/octet-stream;
+
+                    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                                      '$status $body_bytes_sent "$http_referer" '
+                                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+                    access_log  /var/log/nginx/access.log  main;
+
+                    sendfile        on;
+                    #tcp_nopush     on;
+
+                    keepalive_timeout  65;
+
+                    #gzip  on;
+
+                    include /etc/nginx/conf.d/*.conf;
+                }
+            rootDir: /etc/nginx
+        rel: "{{ nms_instance_refs[ item ].rel }}"
+    loop:
+      - nginx1
+      - nginx2
+
+```
 

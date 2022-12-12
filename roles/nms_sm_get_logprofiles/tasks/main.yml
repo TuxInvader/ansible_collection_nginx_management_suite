@@ -33,7 +33,7 @@
     nms_sm_logprofile_refs: "{{ nms_sm_logprofile_refs | default({}) | combine({ item.metadata.name: item |
                         combine({ 'rel': nms_api_version ~ '/security/logprofiles/' ~ item.metadata.name})}, recursive=True) }}"
   loop: "{{ nms_sm_logprofile_status.json['items'] }}"
-  when: nms_sm_logprofile_decode_content is false
+  when: nms_sm_logprofile_decode_content is false or nms_sm_logprofile_include_content is false
 
 - name: Set nms_sm_logprofile_refs fact
   set_fact:
@@ -41,7 +41,9 @@
                         combine({'logProfileContent': (item.logProfileContent | b64decode | from_json),
                         'rel': nms_api_version ~ '/security/logprofiles/' ~ item.metadata.name})}, recursive=True) }}"
   loop: "{{ nms_sm_logprofile_status.json['items'] }}"
-  when: nms_sm_logprofile_decode_content
+  when:
+  - nms_sm_logprofile_include_content
+  - nms_sm_logprofile_decode_content
 
 - name: GET NMS-SM Log Profile status
   uri:
