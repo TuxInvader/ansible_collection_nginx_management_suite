@@ -13,3 +13,10 @@
     state: restarted
   become: true
 
+- name: Restart DevPortal
+  systemd:
+    name: nginx-devportal.service
+    enabled: true
+    state: restarted
+  become: true
+

@@ -110,6 +110,7 @@
     - nginx-devportal
     - nginx-devportal-ui
     state: present
+  notify: Restart DevPortal
   become: true
 
 - name: Initialize the DB
