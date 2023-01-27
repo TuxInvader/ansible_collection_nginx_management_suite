@@ -1,8 +1,7 @@
-NMS Licensing
+# NMS NIM Configuration Templates
 =============
 
-NGINX Management Suite (NMS) Ansible role for creating NGINX configs
-
+NGINX Management Suite (NMS) Ansible role for creating staged configs
 
 Requirements
 ------------
@@ -15,6 +14,7 @@ Role Variables
 `nms_api_version`
 `nms_validate_certs`
 `nms_nim_config_template`
+`nms_nim_encode_config_content`
 
 Dependencies
 ------------
@@ -23,6 +23,10 @@ None
 
 Example Playbook
 ----------------
+
+The role variable `nms_nim_encode_config_content` can be used to indicate that you are providing
+plain text configuration files which need encoding, the default for this varibale is false and the
+configs should be provided as base64 strings. 
 
 ```yaml
 - hosts: localhost
@@ -76,14 +80,6 @@ Example Playbook
               ZSB0Y3Bfc2VydmVyOwogICAgIyAgICBwcm94eV9wYXNzIHN0cmVhbV9iYWNrZW5kOwogICAgI30K
               I30K
 
-          - name: /etc/nginx/mime.types
-            contents: |
-                CnR5cGVzIHsKICAgIHRleHQvaHRtbCAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg
-                ICAgICBodG1sIGh0bSBzaHRtbDsKICAgIHRleHQvY3NzICAgICAgICAgICAgICAgICAgICAgICAg
-                ICAgICAgICAgICAgICAgICBjc3M7CiAgICB0ZXh0L3htbCAgICAgICAgICAgICAgICAgICAgICAg
-                ---SNIP--- ---SNIP--- ---SNIP--- ---SNIP--- ---SNIP--- ---SNIP--- ---SNIP---
-                dmlkZW8gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgYXZpOwp9Cg==
-
           - name: /etc/nginx/conf.d/default.conf
             contents: |
               c2VydmVyIHsKICAgIGxpc3RlbiAgICAgICA4MCBkZWZhdWx0X3NlcnZlcjsKICAgIHNlcnZlcl9u
@@ -118,7 +114,67 @@ Example Playbook
 
 ```
 
+Another example with `nms_nim_encode_config_content` set to true
+
+```yaml
+
+  - name: Create NIM Config Template
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_nim_config_template
+    vars:
+      nms_nim_encode_config_content: true
+      nms_nim_config_template:
+
+        configName: k8s-config
+        auxFiles:
+          files:
+            - name: /etc/app_protect/conf/log_default.json
+              contents: |
+                {
+                  "filter": {
+                      "request_type": "illegal"
+                  },
+
+                  "content": {
+                      "format": "default",
+                      "max_request_size": "any",
+                      "max_message_size": "5k"
+                  }
+                }
+          rootDir: /
+        configFiles:
+          files:
+            - name: /etc/nginx/nginx.conf
+              contents: |
+                user  nginx;
+                worker_processes  auto;
+
+                error_log  /var/log/nginx/error.log notice;
+                pid        /var/run/nginx.pid;
+
+                load_module modules/ngx_http_js_module.so;
+                load_module modules/ngx_http_app_protect_module.so;
+
+                events {
+                    worker_connections  1024;
+                }
+
+                http {
+                    include       /etc/nginx/mime.types;
+                    default_type  application/octet-stream;
+
+                    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                                      '$status $body_bytes_sent "$http_referer" '
+                                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+                    access_log  /var/log/nginx/access.log  main;
+                    keepalive_timeout  65;
+                    include /etc/nginx/conf.d/*.conf;
+                }
+```
+
 After running the list of current configurations will be available in `nms_nim_config_template_refs`
+
 
 License
 -------

@@ -30,11 +30,46 @@
     nms_nim_config_template_refs: "{{ nms_nim_config_template_refs | default({}) | combine({ item.configName: (item  | combine({'rel': nms_api_version ~ '/configs/' ~ item.uid}) )}, recursive=True) }}"
   loop: "{{ nms_nim_config_template_status.json['items'] }}"
 
+# Copy the config from the variable into a local fact for manipulation
+- name: Set config fact
+  set_fact:
+    post_config: "{{ nms_nim_config_template }}"
+
+# If nms_nim_encode_config_content is set, then expect the content to be raw and base64encode it before sending
+- name: Encode file contents
+  block:
+
+  - name: Set config fact
+    set_fact:
+      post_config: "{{ nms_nim_config_template | combine({ 'coinfigName': nms_nim_config_template.configName, 'configFiles': {'files': []}, 'auxFiles': {'files': []}}, recursive=True) }}"
+
+  - name: Encode each config file
+    set_fact:
+      post_config: "{{  post_config | combine({ 'configFiles': {'files': [ {'contents': (file.contents|b64encode), 'name': file.name }]}}, list_merge='append', recursive=True) }}"
+    loop: "{{ nms_nim_config_template.configFiles.files }}"
+    loop_control:
+      loop_var: file
+    when:
+    - nms_nim_config_template.configFiles is defined
+    - nms_nim_config_template.configFiles.files is defined
+
+  - name: Encode each aux file
+    set_fact:
+      post_config: "{{  post_config | combine({ 'auxFiles': {'files': [ {'contents': (file.contents|b64encode), 'name': file.name }]}}, list_merge='append', recursive=True) }}"
+    loop: "{{ nms_nim_config_template.auxFiles.files }}"
+    loop_control:
+      loop_var: file
+    when:
+    - nms_nim_config_template.auxFiles is defined
+    - nms_nim_config_template.auxFiles.files is defined
+
+  when: nms_nim_encode_config_content
+
 - name: Create NMS Config
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_api_version }}/configs"
     method: POST
-    body: "{{ nms_nim_config_template }}"
+    body: "{{ post_config }}"
     body_format: json
     return_content: true
     status_code:
@@ -48,7 +83,7 @@
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_nim_config_template_refs[nms_nim_config_template.configName].rel }}"
     method: PUT
-    body: "{{ nms_nim_config_template }}"
+    body: "{{ post_config }}"
     body_format: json
     return_content: true
     status_code:
