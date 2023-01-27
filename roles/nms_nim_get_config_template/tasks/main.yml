@@ -48,12 +48,16 @@
     headers: "{{ nms_auth_headers }}"
   register: nms_nim_config_template_status
 
+- name: Set raw config set_fact
+  set_fact:
+    nms_nim_encoded_config: "{{ nms_nim_config_template_status.json }}"
+
 - name: Decode NSM Config Status
   block:
 
   - name: Setup Decoded Config fact
     set_fact:
-      nms_nim_decoded_config: "{{ nms_nim_decoded_config | default({}) | combine(nms_nim_config_template_status.json) |
+      nms_nim_decoded_config: "{{ nms_nim_decoded_config | default({}) | combine(nms_nim_encoded_config) |
                               combine({'configFiles': {'files': []}, 'auxFiles': {'files': []}}, recursive=True) }}"
 
   - name: Decode each config file
