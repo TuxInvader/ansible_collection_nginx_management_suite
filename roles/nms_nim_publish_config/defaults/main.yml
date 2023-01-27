@@ -7,6 +7,5 @@ nms_license_force: false
 nms_nim_publish_wait: true
 nms_nim_publish_ignore_conflict: false
 nms_nim_publish_validate_config: true
-nms_nim_publish_decode_content: false
 nms_nim_publish_encode_content: false
 

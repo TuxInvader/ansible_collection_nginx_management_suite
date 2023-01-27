@@ -19,7 +19,6 @@ Role Variables
 * `nms_nim_publish_wait`: Should ansible wait for the publishing to complete (default true)
 * `nms_nim_publish_ignore_conflict`: Should the API ignore conflicts, ie if the deployed config is newer (default false)
 * `nms_nim_publish_validate_config`: Should the API validate the configuration (default true)
-* `nms_nim_publish_decode_content`: Should the role decode the base64 encoded content (default false)
 * `nms_nim_publish_encode_content`: Should the role encode the content prior to upload (default false)
 
 Dependencies
