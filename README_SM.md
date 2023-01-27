@@ -1,4 +1,4 @@
-# Ansible Collection - NGINX Management Suite - Security Module
+# NGINX Management Suite - Security Module (SM)
 
 Documentation for the Security Module.
 

@@ -72,7 +72,7 @@ The NMS RBAC system is made up of three components (roles, users, and groups).
 **Groups**: A collection of users. Groups are only used with an external idP to confer role permissions to members.
 
 ----
-### NSM/NIM Management
+### NMS/NIM Management
 
 * [Licensing](#licensing)
 * [Agent Install / Configuration](#agent-install--configuration)
@@ -240,85 +240,8 @@ TODO
 
 ## Staged Configurations
 
-Upsert a configuration template (Staged Configuration) called base-config.
 
-```yaml
-  - name: Create NIM Config Template
-    include_role:
-      name: nginxinc.nginx_management_suite.nms_nim_config_template
-    vars:
-      nms_nim_config_template:
-        configName: base-config
-        auxFiles:
-          rootDir: /
-          files: []
-        configFiles:
-          rootDir: /etc/nginx
-          files:
-          - name: /etc/nginx/nginx.conf
-            contents: |
-              CnVzZXIgIG5naW54Owp3b3JrZXJfcHJvY2Vzc2VzICBhdXRvOwoKZXJyb3JfbG9nICAvdmFyL2xv
-              Zy9uZ2lueC9lcnJvci5sb2cgbm90aWNlOwpwaWQgICAgICAgIC92YXIvcnVuL25naW54LnBpZDsK
-              CgpldmVudHMgewogICAgd29ya2VyX2Nvbm5lY3Rpb25zICAxMDI0Owp9CgoKaHR0cCB7CiAgICBp
-              bmNsdWRlICAgICAgIC9ldGMvbmdpbngvbWltZS50eXBlczsKICAgIGRlZmF1bHRfdHlwZSAgYXBw
-              bGljYXRpb24vb2N0ZXQtc3RyZWFtOwoKICAgIGxvZ19mb3JtYXQgIG1haW4gICckcmVtb3RlX2Fk
-              ZHIgLSAkcmVtb3RlX3VzZXIgWyR0aW1lX2xvY2FsXSAiJHJlcXVlc3QiICcKICAgICAgICAgICAg
-              ICAgICAgICAgICckc3RhdHVzICRib2R5X2J5dGVzX3NlbnQgIiRodHRwX3JlZmVyZXIiICcKICAg
-              ICAgICAgICAgICAgICAgICAgICciJGh0dHBfdXNlcl9hZ2VudCIgIiRodHRwX3hfZm9yd2FyZGVk
-              X2ZvciInOwoKICAgIGFjY2Vzc19sb2cgIC92YXIvbG9nL25naW54L2FjY2Vzcy5sb2cgIG1haW47
-              CgogICAgc2VuZGZpbGUgICAgICAgIG9uOwogICAgI3RjcF9ub3B1c2ggICAgIG9uOwoKICAgIGtl
-              ZXBhbGl2ZV90aW1lb3V0ICA2NTsKCiAgICAjZ3ppcCAgb247CgogICAgaW5jbHVkZSAvZXRjL25n
-              aW54L2NvbmYuZC8qLmNvbmY7Cn0KCgojIFRDUC9VRFAgcHJveHkgYW5kIGxvYWQgYmFsYW5jaW5n
-              IGJsb2NrCiMKI3N0cmVhbSB7CiAgICAjIEV4YW1wbGUgY29uZmlndXJhdGlvbiBmb3IgVENQIGxv
-              YWQgYmFsYW5jaW5nCgogICAgI3Vwc3RyZWFtIHN0cmVhbV9iYWNrZW5kIHsKICAgICMgICAgem9u
-              ZSB0Y3Bfc2VydmVycyA2NGs7CiAgICAjICAgIHNlcnZlciBiYWNrZW5kMS5leGFtcGxlLmNvbTox
-              MjM0NTsKICAgICMgICAgc2VydmVyIGJhY2tlbmQyLmV4YW1wbGUuY29tOjEyMzQ1OwogICAgI30K
-              CiAgICAjc2VydmVyIHsKICAgICMgICAgbGlzdGVuIDEyMzQ1OwogICAgIyAgICBzdGF0dXNfem9u
-              ZSB0Y3Bfc2VydmVyOwogICAgIyAgICBwcm94eV9wYXNzIHN0cmVhbV9iYWNrZW5kOwogICAgI30K
-              I30K
-```
 
-## Certificates
-
-This is example gets the instances list from NIM, and then uploads the certificate details
-in PEM format, and deploys it to the `nginx1` and `nginx2` instances.
-
-```yaml
-  - name: Get Instances
-    include_role:
-      name: nginxinc.nginx_management_suite.nms_get_instance_refs
-
-  - name: Upsert Certificate
-    include_role:
-      name: nginxinc.nginx_management_suite.nms_nim_certificate
-    vars:
-      nms_nim_certificate:
-        name: NIM
-        instanceRefs:
-          - "{{ nms_instance_refs.nginx1.rel }}"
-          - "{{ nms_instance_refs.nginx2.rel }}"
-        certPEMDetails:
-          type: PEM
-          caCerts:
-            - |
-              -----BEGIN CERTIFICATE-----
-              MIIFLTCCAxWgAwIBAgICECYwDQYJKoZIhvcNAQELBQAwejELMAkGA1UEBhMCR0Ix
-              ................................................................
-              5nUkQYke+VOm1JxhUWgsp7UNUNDhLgtgwPPIjEBo1U+P
-              -----END CERTIFICATE-----
-          publicCert: |
-            -----BEGIN CERTIFICATE-----
-            MIIFLTCCAxWgAwIBAgICECYwDQYJKoZIhvcNAQELBQAwejELMAkGA1UEBhMCR0Ix
-            ................................................................
-            5nUkQYke+VOm1JxhUWgsp7UNUNDhLgtgwPPIjEBo1U+P
-            -----END CERTIFICATE-----
-          privateKey: |
-            -----BEGIN PRIVATE KEY-----
-            MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCpxRW3kpHSaWqB
-            ................................................................
-            N7XmSBhJEUaEq1qkSRYIfFc+Sw==
-            -----END PRIVATE KEY-----
-```
 
 ## Publish Staged Configuration
 

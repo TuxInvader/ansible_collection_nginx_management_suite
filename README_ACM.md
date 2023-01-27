@@ -1,4 +1,4 @@
-# Ansible Collection - NGINX Management Suite - ACM Module
+# NGINX Management Suite - API Connectivity (ACM)
 
 Documentation for the using ACM with this collection.
 
