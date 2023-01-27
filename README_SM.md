@@ -33,7 +33,6 @@ Eg:
     include_role:
       name: nginxinc.nginx_management_suite.nms_nim_publish_config
     vars:
-      nms_nim_publish_decode_content: true
       nms_nim_publish_encode_content: true
       nms_nim_publish_ignore_conflict: true
       nms_nim_publish_validate_config: false

@@ -64,11 +64,12 @@ If you want to create a configuration with a duplicate name (`configName`) then 
 
 If you want to suppress warnings about duplicate configNames then set `nms_nim_config_template_duplicate_warn` to `false`.
 
-Once a configuration has been uploaded for the first time, you should record and store the generated UID within the configuration (returned in `nms_nim_config_template_uid`). The role will use the `uid` in preference to the `configName` if it is provided. 
+Once a configuration has been uploaded for the first time, you should record and store the generated UID within the configuration (returned in `nms_nim_config_template_uid`). The role will use the `uid` in preference to the `configName` if it is provided.
 
 > **NOTE**: You cannot provide a `uid` on creation of a role. NIM will generate one for you, which you can then use on subsequent upserts.
 
 ### Upsert Staged Config
+
 > Role: nms_nim_config_template
 
 Upserting configuration files to NIM requires them to be base64 encoded. The role can encode the files for you, if you set the optional role variable `nms_nim_encode_config_content` to `true`.
@@ -113,6 +114,7 @@ Upsert a configuration template (Staged Configuration) called base-config. The f
 ```
 
 ### Get Staged Config
+
 > Role: nms_nim_get_config_template
 
 This role can be used to download the contents of a Staged Configuration. You must supply exactly one of `nms_nim_config_template_name` or `nms_nim_config_template_uid`. If you supply a name then the role will get the list of staged configs from the server and download that configuration. It is best to use the uid (as returned from nms_nim_get_config_template_refs) if there is any possibility of duplicate names.
@@ -141,11 +143,12 @@ This role can be used to download the contents of a Staged Configuration. You mu
       msg: "{{ nms_nim_decoded_config }}"
 ```
 
-The role returns the configuration with file contents base64 encoded in `nms_nim_encoded_config`. 
+The role returns the configuration with file contents base64 encoded in `nms_nim_encoded_config`.
 
 If you would like a decoded copy, then set `nms_nim_decode_config_content` to `true`. The role with then also return `nms_nim_decoded_config`.
 
 ### Get Staged Config list
+
 > Role: nms_nim_get_config_template_refs
 
 Retrieve a list of staged configs. This returns the list of staged configurations in a dictionary keyed by both name and uid.
@@ -170,3 +173,77 @@ Retrieve a list of staged configs. This returns the list of staged configuration
 
 ## NMS NIM Publish Config
 
+This example retrieves the `Instance Groups` and `Configuration Templates`, and then applies the `basic-config` template to the `production` instance group.
+
+```yaml
+  tasks:
+
+  - name: Setup Authentication with NMS
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_authenticate
+
+  - name: Get Instance Groups
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_get_instance_group_refs
+
+  - name: Get Staged Configs
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_nim_get_config_template_refs
+
+  - name: Publish base-config Config
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_nim_publish_config
+    vars:
+      nms_nim_publish:
+        config:
+          configUid: "{{ nms_nim_config_template_refs['base-config'].uid }}"
+        rel: "{{ nms_instance_group_refs['production'].rel }}"
+```
+
+Publish a config directly to two nginx instances without staging
+
+```yaml
+  tasks:
+
+  - name: Setup Authentication with NMS
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_authenticate
+
+  - name: Get NGINX Instances
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_get_instance_refs
+
+  - name: Create NIM Config Template
+    include_role:
+      name: nginxinc.nginx_management_suite.nms_nim_publish_config
+    vars:
+      nms_nim_publish_encode_content: true
+      nms_nim_publish_ignore_conflict: true
+      nms_nim_publish_validate_config: false
+      nms_nim_publish:
+        config:
+          auxFiles:
+            files:
+            - name: /etc/app_protect/conf/log_default.json
+              contents: |
+                {
+                  "filter": {
+                      "request_type": "illegal"
+                  },
+
+                  "content": {
+                      "format": "default",
+                      "max_request_size": "any",
+                      "max_message_size": "5k"
+                  }
+                }
+            rootDir: /
+          configFiles:
+            files:
+            ...
+            rootDir: /etc/nginx
+        rel: "{{ nms_instance_refs[ item ].rel }}"
+    loop:
+      - nginx1
+      - nginx2
+```
