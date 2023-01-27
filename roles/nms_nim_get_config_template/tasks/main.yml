@@ -10,44 +10,28 @@
 
 - name: Fail if we have neither a template name nor a link
   fail:
-    msg: You must provide exactly oneOf either `nms_nim_config_template_name` or `nms_nim_config_template_rel`
-  when: ( nms_nim_config_template_name is undefined and nms_nim_config_template_rel is undefined ) or
-        ( nms_nim_config_template_name is defined and nms_nim_config_template_rel is defined )
+    msg: You must provide exactly oneOf either `nms_nim_config_template_name` or `nms_nim_config_template_uid`
+  when: ( nms_nim_config_template_name is undefined and nms_nim_config_template_uid is undefined ) or
+        ( nms_nim_config_template_name is defined and nms_nim_config_template_uid is defined )
 
-- name: Check NMS Authentication
-  fail:
-    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
-  when: nms_auth_headers is undefined
+- name: Get Config Template refs
+  include_role: 
+    name: nms_nim_get_config_template_refs
 
-- name: Set configlink fact
+- name: Set nms_nim_get_config_template_link fact (from uid)
   set_fact:
-    nms_nim_get_config_template_link: "{{ nms_nim_config_template_rel | default('') }}"
+    nms_nim_get_config_template_link: "{{ nms_nim_config_template_refs[ nms_nim_config_template_uid ].rel }}"
+  when: nms_nim_config_template_uid is defined
 
 - name: Get NMS Config link by Name
   block:
-
-  - name: GET NMS Config status
-    uri:
-      url: "https://{{ nms_fqdn }}{{ nms_api_version }}/configs"
-      method: GET
-      status_code:
-        - 200
-        - 404
-      validate_certs: "{{ nms_validate_certs | default(false) }}"
-      headers: "{{ nms_auth_headers }}"
-    register: nms_nim_config_template_status
-
-  - name: Set nms_nim_config_template_refs fact
-    set_fact:
-      nms_nim_config_template_refs: "{{ nms_nim_config_template_refs | default({}) | combine({ item.configName: (item  | combine({'rel': nms_api_version ~ '/configs/' ~ item.uid}) )}, recursive=True) }}"
-    loop: "{{ nms_nim_config_template_status.json['items'] }}"
 
   - name: Fail if Config doesn't exist
     fail:
       msg: Cannot find configuration named {{ nms_nim_config_template_name }}.
     when: nms_nim_config_template_name not in nms_nim_config_template_refs
 
-  - name: Set configlink fact
+  - name: Set nms_nim_get_config_template_link fact (from name)
     set_fact:
       nms_nim_get_config_template_link: "{{  nms_nim_config_template_refs[ nms_nim_config_template_name ].rel }}"
 
@@ -69,8 +53,8 @@
 
   - name: Setup Decoded Config fact
     set_fact:
-      nms_nim_decoded_config: "{{ nms_nim_decoded_config | default({}) | combine({ 'coinfigName': nms_nim_config_template_status.json.configName,
-                                  'configFiles': {'files': []}, 'auxFiles': {'files': []}}, recursive=True) }}"
+      nms_nim_decoded_config: "{{ nms_nim_decoded_config | default({}) | combine(nms_nim_config_template_status.json) |
+                              combine({'configFiles': {'files': []}, 'auxFiles': {'files': []}}, recursive=True) }}"
 
   - name: Decode each config file
     set_fact:

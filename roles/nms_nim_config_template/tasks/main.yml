@@ -9,26 +9,13 @@
     - nms_validate_certs
     - nms_nim_config_template
 
-- name: Check NMS Authentication
-  fail:
-    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
-  when: nms_auth_headers is undefined
+- name: Get Config Template refs
+  include_role: 
+    name: nms_nim_get_config_template_refs
 
-- name: GET NMS Config status
-  uri:
-    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/configs"
-    method: GET
-    status_code:
-      - 200
-      - 404
-    validate_certs: "{{ nms_validate_certs | default(false) }}"
-    headers: "{{ nms_auth_headers }}"
-  register: nms_nim_config_template_status
-
-- name: Set nms_nim_config_template_refs fact
+- name: Save our UID if we have one
   set_fact:
-    nms_nim_config_template_refs: "{{ nms_nim_config_template_refs | default({}) | combine({ item.configName: (item  | combine({'rel': nms_api_version ~ '/configs/' ~ item.uid}) )}, recursive=True) }}"
-  loop: "{{ nms_nim_config_template_status.json['items'] }}"
+    nms_nim_config_template_uid: "{{ nms_nim_config_template.uid | default('') }}"
 
 # Copy the config from the variable into a local fact for manipulation
 - name: Set config fact
@@ -41,7 +28,7 @@
 
   - name: Set config fact
     set_fact:
-      post_config: "{{ nms_nim_config_template | combine({ 'coinfigName': nms_nim_config_template.configName, 'configFiles': {'files': []}, 'auxFiles': {'files': []}}, recursive=True) }}"
+      post_config: "{{ nms_nim_config_template | combine({ 'configFiles': {'files': []}, 'auxFiles': {'files': []}}, recursive=True) }}"
 
   - name: Encode each config file
     set_fact:
@@ -77,9 +64,38 @@
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: nms_post_response
-  when: nms_nim_config_template_refs is undefined or nms_nim_config_template_refs[nms_nim_config_template.configName] is undefined
+  changed_when: nms_post_response.status == 201
+  when: nms_nim_create_new_config or nms_nim_config_template_refs is undefined or nms_nim_config_template_refs[nms_nim_config_template.configName] is undefined
 
-- name: Patch NMS Config
+- name: Record generated UID
+  set_fact:
+    nms_nim_config_template_uid: "{{ nms_post_response.json.uid }}"
+  when: "'json' in nms_post_response"
+
+- name: Patch NMS Config (by UID)
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_nim_config_template_refs[nms_nim_config_template.uid].rel }}"
+    method: PUT
+    body: "{{ post_config }}"
+    body_format: json
+    return_content: true
+    status_code:
+      - 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_put_response
+  changed_when: nms_put_response.status == 200
+  when:
+  - nms_nim_create_new_config is false
+  - "'uid' in nms_nim_config_template"
+  - nms_nim_config_template_refs[nms_nim_config_template.uid] is defined
+
+- name: Record patched UID
+  set_fact:
+    nms_nim_config_template_uid: "{{ nms_put_response.json.uid }}"
+  when: "'json' in nms_put_response"
+
+- name: Patch NMS Config (by name)
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_nim_config_template_refs[nms_nim_config_template.configName].rel }}"
     method: PUT
@@ -91,30 +107,18 @@
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: nms_put_response
-  when: nms_nim_config_template_refs[nms_nim_config_template.configName] is defined
+  changed_when: nms_put_response.status == 200
+  when:
+  - nms_nim_create_new_config is false
+  - "'uid' not in nms_nim_config_template"
+  - nms_nim_config_template_refs[nms_nim_config_template.configName] is defined
 
-- name: GET NMS Config list
-  uri:
-    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/configs"
-    method: GET
-    status_code:
-      - 200
-      - 404
-    validate_certs: "{{ nms_validate_certs | default(false) }}"
-    headers: "{{ nms_auth_headers }}"
-  register: nms_nim_config_template_status
-
-- name: Set nms_nim_config_template_refs fact
+- name: Record patched UID
   set_fact:
-    nms_nim_config_template_refs: "{{ nms_nim_config_template_refs | default({}) | combine({ item.configName: (item  | combine({'rel': nms_api_version ~ '/configs/' ~ item.uid}) )}, recursive=True) }}"
-  loop: "{{ nms_nim_config_template_status.json['items'] }}"
+    nms_nim_config_template_uid: "{{ nms_put_response.json.uid }}"
+  when: "'json' in nms_put_response"
 
-- name: GET NMS Config status
-  uri:
-    url: "https://{{ nms_fqdn }}{{ nms_nim_config_template_refs[ nms_nim_config_template.configName ].rel }}"
-    method: GET
-    status_code: 200
-    validate_certs: "{{ nms_validate_certs | default(false) }}"
-    headers: "{{ nms_auth_headers }}"
-  register: nms_nim_config_template_status
+- name: Get Config Template refs
+  include_role: 
+    name: nms_nim_get_config_template_refs
 
