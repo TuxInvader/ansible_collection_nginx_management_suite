@@ -10,7 +10,7 @@
 
 - name: Fail if we have no config
   fail:
-    fail_msg: "You must provide a data structure in nms_nim_publish"
+    msg: "You must provide a data structure in nms_nim_publish"
   when: nms_nim_publish is not defined
 
 - name: Check NMS Authentication
