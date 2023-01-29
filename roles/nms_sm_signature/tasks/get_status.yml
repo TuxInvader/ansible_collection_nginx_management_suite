@@ -20,4 +20,3 @@
     nms_sm_signature_refs: "{{ nms_sm_signature_refs | default({}) | combine({ item.revisionTimestamp: ( item |
                             combine({'rel': nms_api_version ~ '/security/{{ nms_sm_api_paths[nms_sm_signature_type] }}/' ~ item.uid}, recursive=True))}) }}"
   loop: "{{ nms_sm_signature_status.json['items'] }}"
-

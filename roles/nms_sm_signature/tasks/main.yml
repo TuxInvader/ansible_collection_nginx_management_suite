@@ -13,12 +13,12 @@
 
 - name: Fail if source is set incorrectly
   assert:
-    that: "{{ nms_sm_signature_source in ['local','remote']}}" 
+    that: "{{ nms_sm_signature_source in ['local', 'remote'] }}"
     fail_msg: "nms_sm_signature_source should be 'local' or 'remote'"
 
 - name: Fail if type is set incorrectly
   assert:
-    that: "{{ nms_sm_signature_type in ['sig','threat']}}" 
+    that: "{{ nms_sm_signature_type in ['sig', 'threat'] }}"
     fail_msg: "nms_sm_signature_type should be 'sig' or 'threat'"
 
 - name: Fail if local source variables are missing
@@ -56,4 +56,3 @@
 
 - name: Update Status
   include_tasks: get_status.yml
-

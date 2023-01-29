@@ -5,7 +5,7 @@
 
 # NMS doesn't support Content-Transfer-Encoding as used by the uri module.
 #
-#- name: Upsert NMS-SM Security Policy
+# - name: Upsert NMS-SM Security Policy
 #  uri:
 #    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/security/{{ nms_sm_api_paths[nms_sm_signature_type] }}"
 #    method: POST

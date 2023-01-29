@@ -6,40 +6,39 @@
 - name: Create fact from deployment config
   set_fact:
     post_data: "{{ nms_sm_publish | combine( { 'instances': [], 'instanceGroups': [], 'systems': []} )  }}"
-    #post_data: "{{ nms_sm_publish }}"
 
 - name: Locate Instances by name
   block:
 
-  - name: find instances
-    include_role:
-      name: nginxinc.nginx_management_suite.nms_get_instance_refs
+    - name: find instances
+      include_role:
+        name: nginxinc.nginx_management_suite.nms_get_instance_refs
 
-  - name: update post_data (instances) fact
-    set_fact:
-      post_data: "{{ post_data | default({}) | combine( { 
-        'systems': ( post_data.systems | default([]) + [ nms_instance_refs[item]['systemUid'] ] ),
-        'instances': ( post_data.instances | default([]) + [ nms_instance_refs[item]['uid'] ] )
-        }, recursive=True)  }}"
-    loop: "{{ nms_sm_publish_instances }}"
-    when: nms_instance_refs[item] is defined
+    - name: update post_data (instances) fact
+      set_fact:
+        post_data: "{{ post_data | default({}) | combine( {
+          'systems': ( post_data.systems | default([]) + [ nms_instance_refs[item]['systemUid'] ] ),
+          'instances': ( post_data.instances | default([]) + [ nms_instance_refs[item]['uid'] ] )
+          }, recursive=True)  }}"
+      loop: "{{ nms_sm_publish_instances }}"
+      when: nms_instance_refs[item] is defined
 
   when: nms_sm_publish_instances is defined
 
 - name: Locate Instance Groups by name
   block:
 
-  - name: find instance groups
-    include_role:
-      name: nginxinc.nginx_management_suite.nms_get_instance_group_refs
+    - name: find instance groups
+      include_role:
+        name: nginxinc.nginx_management_suite.nms_get_instance_group_refs
 
-  - name: update nms_sm_publish fact
-    set_fact:
-      post_data: "{{ post_data | default({}) | combine( {
-        'instanceGroups': ( post_data.instanceGroups | default([]) + [ nms_instance_group_refs[item]['uid'] ] ),
-        }, recursive=True)  }}"
-    loop: "{{ nms_sm_publish_instanceGroups }}"
-    when: nms_instance_group_refs[item] is defined
+    - name: update nms_sm_publish fact
+      set_fact:
+        post_data: "{{ post_data | default({}) | combine( {
+          'instanceGroups': ( post_data.instanceGroups | default([]) + [ nms_instance_group_refs[item]['uid'] ] ),
+          }, recursive=True)  }}"
+      loop: "{{ nms_sm_publish_instanceGroups }}"
+      when: nms_instance_group_refs[item] is defined
 
   when: nms_sm_publish_instanceGroups is defined
 
@@ -49,7 +48,7 @@
     method: POST
     body:
       publications:
-      - "{{ post_data }}"
+        - "{{ post_data }}"
     body_format: json
     return_content: true
     status_code:
@@ -59,4 +58,3 @@
     headers: "{{ nms_auth_headers }}"
   register: response
   changed_when: response.status == 201
-    

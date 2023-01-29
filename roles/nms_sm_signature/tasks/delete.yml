@@ -14,35 +14,34 @@
 
 - name: Delete by Name
   block:
-  
-  - name: GET NMS-SM Signature status
-    uri:
-      url: "https://{{ nms_fqdn }}{{ nms_api_version }}/security/{{ nms_sm_api_paths[nms_sm_signature_type] }}"
-      method: GET
-      status_code:
-        - 200
-        - 404
-      validate_certs: "{{ nms_validate_certs | default(false) }}"
-      headers: "{{ nms_auth_headers }}"
-    register: nms_sm_signature_status
 
-  - name: Set nms_sm_signature_refs fact
-    set_fact:
-      nms_sm_signature_refs: "{{ nms_sm_signature_refs | default({}) | combine({ item.revisionTimestamp: (item  |
-           combine({'rel': nms_api_version ~ '/security/' ~ nms_sm_api_paths[nms_sm_signature_type] ~ '/' ~ item.revisionTimestamp}) )}, recursive=True) }}"
-    loop: "{{ nms_sm_signature_status.json['items'] }}"
+    - name: GET NMS-SM Signature status
+      uri:
+        url: "https://{{ nms_fqdn }}{{ nms_api_version }}/security/{{ nms_sm_api_paths[nms_sm_signature_type] }}"
+        method: GET
+        status_code:
+          - 200
+          - 404
+        validate_certs: "{{ nms_validate_certs | default(false) }}"
+        headers: "{{ nms_auth_headers }}"
+      register: nms_sm_signature_status
 
-  - name: Delete Policy
-    uri:
-      url: "https://{{ nms_fqdn }}{{ nms_sm_signature_refs[nms_sm_signature.revisionTimestamp].rel }}"
-      method: DELETE
-      status_code:
-        - 204
-      validate_certs: "{{ nms_validate_certs | default(false) }}"
-      headers: "{{ nms_auth_headers }}"
-    register: response
-    changed_when: response.status == 204
-    when: nms_sm_signature_refs[nms_sm_signature.revisionTimestamp] is defined
+    - name: Set nms_sm_signature_refs fact
+      set_fact:
+        nms_sm_signature_refs: "{{ nms_sm_signature_refs | default({}) | combine({ item.revisionTimestamp: (item  |
+             combine({'rel': nms_api_version ~ '/security/' ~ nms_sm_api_paths[nms_sm_signature_type] ~ '/' ~ item.revisionTimestamp}) )}, recursive=True) }}"
+      loop: "{{ nms_sm_signature_status.json['items'] }}"
+
+    - name: Delete Policy
+      uri:
+        url: "https://{{ nms_fqdn }}{{ nms_sm_signature_refs[nms_sm_signature.revisionTimestamp].rel }}"
+        method: DELETE
+        status_code:
+          - 204
+        validate_certs: "{{ nms_validate_certs | default(false) }}"
+        headers: "{{ nms_auth_headers }}"
+      register: response
+      changed_when: response.status == 204
+      when: nms_sm_signature_refs[nms_sm_signature.revisionTimestamp] is defined
 
   when: nms_sm_signature.uid is not defined
-
