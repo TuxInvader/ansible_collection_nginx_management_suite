@@ -25,4 +25,3 @@
 
 - name: Update Status
   include_tasks: get_status.yml
-

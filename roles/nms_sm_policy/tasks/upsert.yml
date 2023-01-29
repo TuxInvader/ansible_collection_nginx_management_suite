@@ -22,30 +22,29 @@
     headers: "{{ nms_auth_headers }}"
   register: response
   changed_when: response.status == 201
-    
-  when: nms_sm_policy_refs is undefined or nms_sm_policy_refs[nms_sm_policy.metadata.name] is undefined or
-        nms_sm_policy_new_revision == true
 
-- name: Patch existing NMS-SM Policy 
+  when: nms_sm_policy_refs is undefined or nms_sm_policy_refs[nms_sm_policy.metadata.name] is undefined or
+        nms_sm_policy_new_revision is true
+
+- name: Patch existing NMS-SM Policy
   block:
 
-  - name: PUT Policy
-    uri:
-      url: "https://{{ nms_fqdn }}{{ nms_sm_policy_refs[nms_sm_policy.metadata.name].rel }}"
-      method: PUT
-      body: "{{ nms_sm_policy_json }}"
-      body_format: json
-      return_content: true
-      status_code:
-        - 200
-      validate_certs: "{{ nms_validate_certs | default(false) }}"
-      headers: "{{ nms_auth_headers }}"
-    register: response
-    changed_when: response.status == 200
-    when: ( nms_sm_policy_status.json.content != nms_sm_policy_json.content ) or
-        ( nms_sm_policy_status.json.metadata.displayName != nms_sm_policy.metadata.displayName ) or
-        ( nms_sm_policy_status.json.metadata.description != nms_sm_policy.metadata.description ) 
+    - name: PUT Policy
+      uri:
+        url: "https://{{ nms_fqdn }}{{ nms_sm_policy_refs[nms_sm_policy.metadata.name].rel }}"
+        method: PUT
+        body: "{{ nms_sm_policy_json }}"
+        body_format: json
+        return_content: true
+        status_code:
+          - 200
+        validate_certs: "{{ nms_validate_certs | default(false) }}"
+        headers: "{{ nms_auth_headers }}"
+      register: response
+      changed_when: response.status == 200
+      when: ( nms_sm_policy_status.json.content != nms_sm_policy_json.content ) or
+          ( nms_sm_policy_status.json.metadata.displayName != nms_sm_policy.metadata.displayName ) or
+          ( nms_sm_policy_status.json.metadata.description != nms_sm_policy.metadata.description )
 
   when: nms_sm_policy_refs is defined and nms_sm_policy_refs[nms_sm_policy.metadata.name] is defined and
-        nms_sm_policy_new_revision == false
-
+        nms_sm_policy_new_revision is false

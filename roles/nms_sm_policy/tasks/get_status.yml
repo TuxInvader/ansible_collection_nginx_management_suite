@@ -34,7 +34,8 @@
 
 - name: Update link when UID is provided
   set_fact:
-    nms_sm_policy_refs: "{{ nms_sm_policy_refs | default({}) | combine({ item.name: { 'rel': nms_api_version ~ '/security/policies/' ~ item.uid }}, recursive=True) }}"
+    nms_sm_policy_refs: "{{ nms_sm_policy_refs | default({}) | combine({ item.name: { 'rel': nms_api_version ~
+                        '/security/policies/' ~ item.uid }}, recursive=True) }}"
   vars:
     jmes_path: "*.versions[? metadata.uid == '{{ nms_sm_policy.metadata.uid }}' ].metadata[]"
   loop: "{{ nms_sm_policy_refs | json_query(jmes_path) }}"
@@ -51,4 +52,3 @@
     headers: "{{ nms_auth_headers }}"
   register: nms_sm_policy_status
   when: nms_sm_policy_refs[ nms_sm_policy.metadata.name ] is defined
-

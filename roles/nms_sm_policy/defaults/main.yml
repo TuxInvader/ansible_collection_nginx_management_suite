@@ -7,4 +7,3 @@ nms_license_force: false
 nms_sm_policy_state: present
 nms_sm_policy_new_revision: false
 nms_sm_policy_decode_content: false
-
