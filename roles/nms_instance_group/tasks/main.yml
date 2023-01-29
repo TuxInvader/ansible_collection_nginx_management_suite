@@ -26,9 +26,10 @@
 
 - name: Set nms_instance_group_refs fact
   set_fact:
-    nms_instance_group_refs: "{{ nms_instance_group_refs | default({}) | combine({ item.name: (item | combine({ 'rel': nms_api_version ~ '/instance-groups/' ~ item.uid }))}, recursive=True) }}"
+    nms_instance_group_refs: "{{ nms_instance_group_refs | default({}) | combine({ item.name: (item |
+                             combine({ 'rel': nms_api_version ~ '/instance-groups/' ~ item.uid }))}, recursive=True) }}"
   loop: "{{ nms_instance_group_status.json['items'] }}"
-  
+
 - name: Create NMS Instance Group
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_api_version }}/instance-groups"
@@ -69,7 +70,8 @@
 
 - name: Set nms_instance_group_refs fact
   set_fact:
-    nms_instance_group_refs: "{{ nms_instance_group_refs | default({}) | combine({ item.name: (item | combine({ 'rel': nms_api_version ~ '/instance-groups/' ~ item.uid }))}, recursive=True) }}"
+    nms_instance_group_refs: "{{ nms_instance_group_refs | default({}) | combine({ item.name: (item |
+                             combine({ 'rel': nms_api_version ~ '/instance-groups/' ~ item.uid }))}, recursive=True) }}"
   loop: "{{ nms_instance_group_status.json['items'] }}"
 
 - name: GET NMS Instance Group status
@@ -80,4 +82,3 @@
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: nms_instance_group_status
-

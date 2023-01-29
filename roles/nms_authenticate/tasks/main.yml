@@ -9,6 +9,6 @@
 
 - name: Setup Auth Headers
   set_fact:
-    nms_auth_headers: "{{ nms_auth_headers | default({}) | combine({ 'Authorization': 'Basic ' + (( nms_user_name + ':' + nms_user_passwd)| b64encode ) }, recursive=True) }}"
+    nms_auth_headers: "{{ nms_auth_headers | default({}) | combine({ 'Authorization': 'Basic ' +
+                      (( nms_user_name + ':' + nms_user_passwd)| b64encode ) }, recursive=True) }}"
   when: nms_auth_type == "basic"
-

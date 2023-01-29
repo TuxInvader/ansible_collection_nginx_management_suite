@@ -10,7 +10,7 @@
     - nms_nim_config_template
 
 - name: Get Config Template refs
-  include_role: 
+  include_role:
     name: nms_nim_get_config_template_refs
 
 - name: Save our UID if we have one
@@ -26,29 +26,31 @@
 - name: Encode file contents
   block:
 
-  - name: Set config fact
-    set_fact:
-      post_config: "{{ nms_nim_config_template | combine({ 'configFiles': {'files': []}, 'auxFiles': {'files': []}}, recursive=True) }}"
+    - name: Set config fact
+      set_fact:
+        post_config: "{{ nms_nim_config_template | combine({ 'configFiles': {'files': []}, 'auxFiles': {'files': [] }}, recursive=True) }}"
 
-  - name: Encode each config file
-    set_fact:
-      post_config: "{{  post_config | combine({ 'configFiles': {'files': [ {'contents': (file.contents|b64encode), 'name': file.name }]}}, list_merge='append', recursive=True) }}"
-    loop: "{{ nms_nim_config_template.configFiles.files }}"
-    loop_control:
-      loop_var: file
-    when:
-    - nms_nim_config_template.configFiles is defined
-    - nms_nim_config_template.configFiles.files is defined
+    - name: Encode each config file
+      set_fact:
+        post_config: "{{  post_config | combine({ 'configFiles': {'files': [ {'contents': (file.contents|b64encode),
+                     'name': file.name }] }}, list_merge='append', recursive=True) }}"
+      loop: "{{ nms_nim_config_template.configFiles.files }}"
+      loop_control:
+        loop_var: file
+      when:
+        - nms_nim_config_template.configFiles is defined
+        - nms_nim_config_template.configFiles.files is defined
 
-  - name: Encode each aux file
-    set_fact:
-      post_config: "{{  post_config | combine({ 'auxFiles': {'files': [ {'contents': (file.contents|b64encode), 'name': file.name }]}}, list_merge='append', recursive=True) }}"
-    loop: "{{ nms_nim_config_template.auxFiles.files }}"
-    loop_control:
-      loop_var: file
-    when:
-    - nms_nim_config_template.auxFiles is defined
-    - nms_nim_config_template.auxFiles.files is defined
+    - name: Encode each aux file
+      set_fact:
+        post_config: "{{  post_config | combine({ 'auxFiles': {'files': [ {'contents': (file.contents|b64encode),
+                     'name': file.name }] }}, list_merge='append', recursive=True) }}"
+      loop: "{{ nms_nim_config_template.auxFiles.files }}"
+      loop_control:
+        loop_var: file
+      when:
+        - nms_nim_config_template.auxFiles is defined
+        - nms_nim_config_template.auxFiles.files is defined
 
   when: nms_nim_encode_config_content
 
@@ -86,9 +88,9 @@
   register: nms_put_response
   changed_when: nms_put_response.status == 200
   when:
-  - nms_nim_create_new_config is false
-  - "'uid' in nms_nim_config_template"
-  - nms_nim_config_template_refs[nms_nim_config_template.uid] is defined
+    - nms_nim_create_new_config is false
+    - "'uid' in nms_nim_config_template"
+    - nms_nim_config_template_refs[nms_nim_config_template.uid] is defined
 
 - name: Record patched UID
   set_fact:
@@ -109,9 +111,9 @@
   register: nms_put_response
   changed_when: nms_put_response.status == 200
   when:
-  - nms_nim_create_new_config is false
-  - "'uid' not in nms_nim_config_template"
-  - nms_nim_config_template_refs[nms_nim_config_template.configName] is defined
+    - nms_nim_create_new_config is false
+    - "'uid' not in nms_nim_config_template"
+    - nms_nim_config_template_refs[nms_nim_config_template.configName] is defined
 
 - name: Record patched UID
   set_fact:
@@ -119,6 +121,5 @@
   when: "'json' in nms_put_response"
 
 - name: Get Config Template refs
-  include_role: 
+  include_role:
     name: nms_nim_get_config_template_refs
-

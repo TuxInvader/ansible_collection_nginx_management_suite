@@ -29,7 +29,7 @@
   set_fact:
     nms_acm_workspace_refs: "{{ nms_acm_workspace_refs | default({}) | combine({ (item.href | basename): item.href }, recursive=True) }}"
   loop: "{{ nms_acm_workspace_status.json['_links'] }}"
-  
+
 - name: Create ACM Workspace
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_api_version }}/{{ nms_acm_team }}/workspaces"
@@ -83,4 +83,3 @@
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: nms_acm_workspace_status
-

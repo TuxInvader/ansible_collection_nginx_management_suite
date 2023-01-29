@@ -29,7 +29,7 @@
   set_fact:
     nms_acm_proxy_refs: "{{ nms_acm_proxy_refs | default({}) | combine({ (item.href | regex_replace('.*hostname=([^&]*)$', '\\1')) : item }, recursive=True) }}"
   loop: "{{ nms_acm_proxy_status.json['_links'] }}"
-  
+
 - name: Create ACM Proxies
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/proxies"
@@ -67,46 +67,48 @@
 - name: Wait for Publishing
   block:
 
-  - name: GET ACM Workspace Proxy status
-    uri:
-      url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/proxies"
-      method: GET
-      status_code:
-        - 200
-      validate_certs: "{{ nms_validate_certs | default(false) }}"
-      headers: "{{ nms_auth_headers }}"
-    register: nms_acm_proxy_status
-    retries: 12
-    delay: 5
-    until: |
-      ( '_links' in nms_acm_proxy_status.json ) and
-      ( nms_acm_proxy_status.json._links | length > 0 )
+    - name: GET ACM Workspace Proxy status
+      uri:
+        url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/proxies"
+        method: GET
+        status_code:
+          - 200
+        validate_certs: "{{ nms_validate_certs | default(false) }}"
+        headers: "{{ nms_auth_headers }}"
+      register: nms_acm_proxy_status
+      retries: 12
+      delay: 5
+      until: |
+        ( '_links' in nms_acm_proxy_status.json ) and
+        ( nms_acm_proxy_status.json._links | length > 0 )
 
-  - name: Set nms_acm_proxy_refs fact
-    set_fact:
-      nms_acm_proxy_refs: "{{ nms_acm_proxy_refs | default({}) | combine({ (item.href | regex_replace('.*hostname=([^&]*)$', '\\1')) : item }, recursive=True) }}"
-    loop: "{{ nms_acm_proxy_status.json['_links'] }}"
+    - name: Set nms_acm_proxy_refs fact
+      set_fact:
+        nms_acm_proxy_refs: "{{ nms_acm_proxy_refs | default({}) | combine({ (item.href |
+                            regex_replace('.*hostname=([^&]*)$', '\\1')) : item }, recursive=True) }}"
+      loop: "{{ nms_acm_proxy_status.json['_links'] }}"
 
-  - name: "Wait for Configuration... "
-    uri:
-      url: "https://{{ nms_fqdn }}{{ nms_acm_proxy_refs[ nms_acm_proxies.proxyConfig.hostname ].href }}"
-      method: GET
-      return_content: true
-      status_code:
-        - 200
-        - 404
-      validate_certs: "{{ nms_validate_certs | default(false) }}"
-      headers: "{{ nms_auth_headers }}"
-    register: nms_publish_result
-    retries: 12
-    delay: 5
-    until: |
-      ( 'configState' in nms_publish_result.json.configs.0 ) and 
-      ( (nms_publish_result.json.configs.0.configState.proxy.configState.status in ["SUCCESS", "FAIL"]) or
-      (('errors' in nms_publish_result.json.configs.0.configState) and (nms_publish_result.json.configs.0.configState.errors|length > 0)) )
-    failed_when: |
-      (('errors' in nms_publish_result.json.configs.0.configState) and (nms_publish_result.json.configs.0.configState.errors|length > 0) ) or
-      ((nms_publish_result.json.configs.0.configState.proxy.configState.status is not none) and (nms_publish_result.json.configs.0.configState.proxy.configState.status == "FAIL" ))
+    - name: "Wait for Configuration... "
+      uri:
+        url: "https://{{ nms_fqdn }}{{ nms_acm_proxy_refs[ nms_acm_proxies.proxyConfig.hostname ].href }}"
+        method: GET
+        return_content: true
+        status_code:
+          - 200
+          - 404
+        validate_certs: "{{ nms_validate_certs | default(false) }}"
+        headers: "{{ nms_auth_headers }}"
+      register: nms_publish_result
+      retries: 12
+      delay: 5
+      until: |
+        ( 'configState' in nms_publish_result.json.configs.0 ) and
+        ( (nms_publish_result.json.configs.0.configState.proxy.configState.status in ["SUCCESS", "FAIL"]) or
+        (('errors' in nms_publish_result.json.configs.0.configState) and (nms_publish_result.json.configs.0.configState.errors|length > 0)) )
+      failed_when: |
+        (('errors' in nms_publish_result.json.configs.0.configState) and (nms_publish_result.json.configs.0.configState.errors|length > 0) ) or
+        ((nms_publish_result.json.configs.0.configState.proxy.configState.status is not none) and
+        (nms_publish_result.json.configs.0.configState.proxy.configState.status == "FAIL" ))
 
   when: nms_nim_publish_wait == true
 
@@ -124,7 +126,7 @@
   set_fact:
     nms_acm_proxy_refs: "{{ nms_acm_proxy_refs | default({}) | combine({ (item.href | regex_replace('.*hostname=([^&]*)$', '\\1')) : item }, recursive=True) }}"
   loop: "{{ nms_acm_proxy_status.json['_links'] }}"
-  
+
 - name: GET ACM Proxy status
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_acm_proxy_refs[ nms_acm_proxies.proxyConfig.hostname ].href }}"
@@ -134,4 +136,3 @@
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: nms_acm_proxy_status
-

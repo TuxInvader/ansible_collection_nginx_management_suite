@@ -42,8 +42,8 @@
                         'rel': nms_api_version ~ '/security/logprofiles/' ~ item.metadata.name})}, recursive=True) }}"
   loop: "{{ nms_sm_logprofile_status.json['items'] }}"
   when:
-  - nms_sm_logprofile_include_content
-  - nms_sm_logprofile_decode_content
+    - nms_sm_logprofile_include_content
+    - nms_sm_logprofile_decode_content
 
 - name: GET NMS-SM Log Profile status
   uri:
@@ -55,9 +55,8 @@
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: nms_sm_logprofile_status
-  when: 
-  - nms_sm_logprofile is defined
-  - nms_sm_logprofile['metadata'] is defined
-  - nms_sm_logprofile['metadata']['name'] is defined
-  - nms_sm_logprofile_refs[ nms_sm_logprofile['metadata']['name'] ] is defined
-
+  when:
+    - nms_sm_logprofile is defined
+    - nms_sm_logprofile['metadata'] is defined
+    - nms_sm_logprofile['metadata']['name'] is defined
+    - nms_sm_logprofile_refs[ nms_sm_logprofile['metadata']['name'] ] is defined

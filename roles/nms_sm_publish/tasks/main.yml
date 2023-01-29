@@ -16,10 +16,10 @@
   ansible.builtin.fail:
     msg: "nms_sm_publish needs atleast one target. Please provide: 'instances' or 'instanceGroups'"
   when:
-  - nms_sm_publish.instances is undefined
-  - nms_sm_publish_instances is undefined
-  - nms_sm_publish.instanceGroups is undefined
-  - nms_sm_publish_instanceGroups is undefined
+    - nms_sm_publish.instances is undefined
+    - nms_sm_publish_instances is undefined
+    - nms_sm_publish.instanceGroups is undefined
+    - nms_sm_publish_instanceGroups is undefined
 
 - name: Check NMS Authentication
   fail:
@@ -31,4 +31,3 @@
 
 - name: Update Status
   include_tasks: get_status.yml
-
