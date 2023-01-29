@@ -85,19 +85,19 @@ The NMS RBAC system is made up of three components (roles, users, and groups).
 
 ### NIM Configuration Management
 
-* [NIM Configuration](./README_NIM.md)
+* [NIM Configuration](./docs/README_NIM.md)
 
 ----
 
 ### NMS API Connectivity Manager (ACM)
 
-* [ACM Configuration](./README_ACM.md)
+* [ACM Configuration](./docs/README_ACM.md)
 
 ----
 
 ### NMS Security Module (SM)
 
-* [NMS-SM Configuration](./README_SM.md)
+* [NMS-SM Configuration](./docs/README_SM.md)
 
 ----
 
