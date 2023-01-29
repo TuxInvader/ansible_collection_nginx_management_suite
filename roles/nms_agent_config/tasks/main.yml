@@ -54,6 +54,15 @@
   become: true
   notify: Restart Agent
 
+- name: Unset the instance group
+  lineinfile:
+    path: /etc/nginx-agent/agent-dynamic.conf
+    state: absent
+    regexp: "^instance_group:.*"
+  when: ( nms_agent_instance_group | default('') | length ) == 0
+  become: true
+  notify: Restart Agent
+
 - name: Setup Agent for NAP
   block:
 
