@@ -29,7 +29,7 @@
   set_fact:
     nms_acm_environment_refs: "{{ nms_acm_environment_refs | default({}) | combine({ item.name: item }, recursive=True) }}"
   loop: "{{ nms_acm_environment_status.json['items'] }}"
-  
+
 - name: Create ACM Environment
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments"
@@ -67,35 +67,36 @@
 - name: Wait for Publishing
   block:
 
-  - name: Set status fact
-    set_fact:
-      nms_publish_result: "{{ nms_post_response }}"
-    when: nms_post_response.changed
+    - name: Set status fact
+      set_fact:
+        nms_publish_result: "{{ nms_post_response }}"
+      when: nms_post_response.changed
 
-  - name: Set status fact
-    set_fact:
-      nms_publish_result: "{{ nms_put_response }}"
-    when: nms_put_response.changed
+    - name: Set status fact
+      set_fact:
+        nms_publish_result: "{{ nms_put_response }}"
+      when: nms_put_response.changed
 
-  - name: "Wait for Configuration... JobID: {{ nms_publish_result.json.configState.jobID | default('unknown') }}"
-    uri:
-      url: "https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments/{{ nms_acm_environment.name }}/jobs/{{nms_publish_result.json.configState.jobID}}"
-      method: GET
-      return_content: true
-      status_code:
-        - 200
-        - 404
-      validate_certs: "{{ nms_validate_certs | default(false) }}"
-      headers: "{{ nms_auth_headers }}"
-    register: nms_publish_result
-    retries: 60
-    delay: 10
-    until: |
-      ( (nms_publish_result.json.status in ["SUCCESS", "FAIL"]) or
-      (('errors' in nms_publish_result.json) and (nms_publish_result.json.errors|length > 0)) )
-    failed_when: |
-      (('errors' in nms_publish_result.json) and (nms_publish_result.json.errors|length > 0) ) or
-      (nms_publish_result.json.status != "SUCCESS")
+    - name: "Wait for Configuration... JobID: {{ nms_publish_result.json.configState.jobID | default('unknown') }}"
+      uri:
+        url: https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments/
+             {{ nms_acm_environment.name }}/jobs/{{ nms_publish_result.json.configState.jobID }}
+        method: GET
+        return_content: true
+        status_code:
+          - 200
+          - 404
+        validate_certs: "{{ nms_validate_certs | default(false) }}"
+        headers: "{{ nms_auth_headers }}"
+      register: nms_publish_result
+      retries: 60
+      delay: 10
+      until: |
+        ( (nms_publish_result.json.status in ["SUCCESS", "FAIL"]) or
+        (('errors' in nms_publish_result.json) and (nms_publish_result.json.errors|length > 0)) )
+      failed_when: |
+        (('errors' in nms_publish_result.json) and (nms_publish_result.json.errors|length > 0) ) or
+        (nms_publish_result.json.status != "SUCCESS")
 
   when: nms_nim_publish_wait == true
 
@@ -123,4 +124,3 @@
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: nms_acm_environment_status
-

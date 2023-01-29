@@ -26,7 +26,7 @@
 - name: Set nms_sm_policy_refs fact
   set_fact:
     nms_sm_policy_refs: "{{ nms_sm_policy_refs | default({}) | combine({ item.metadata.name: ( nms_sm_policy_refs[item.metadata.name] | default({}) |
-                        combine({ 'versions': ( nms_sm_policy_refs[item.metadata.name].versions | default([]) + [item]), 
+                        combine({ 'versions': ( nms_sm_policy_refs[item.metadata.name].versions | default([]) + [item]),
                         'rel': nms_api_version ~ '/security/policies/' ~ item.metadata.uid}, recursive=True) )}, recursive=True) }}"
   loop: "{{ nms_sm_policy_status.json['items'] }}"
   when: nms_sm_policy_decode_content is false or nms_sm_policy_include_content is false
@@ -34,13 +34,13 @@
 - name: Set nms_sm_policy_refs fact
   set_fact:
     nms_sm_policy_refs: "{{ nms_sm_policy_refs | default({}) | combine({ item.metadata.name: ( nms_sm_policy_refs[item.metadata.name] | default({}) |
-                        combine({ 'versions': ( nms_sm_policy_refs[item.metadata.name].versions | 
+                        combine({ 'versions': ( nms_sm_policy_refs[item.metadata.name].versions |
                         default([]) + [( item | combine({'content': (item.content | b64decode | from_json)})) ]),
                         'rel': nms_api_version ~ '/security/policies/' ~ item.metadata.uid}, recursive=True) )}, recursive=True) }}"
   loop: "{{ nms_sm_policy_status.json['items'] }}"
-  when: 
-  - nms_sm_policy_include_content
-  - nms_sm_policy_decode_content
+  when:
+    - nms_sm_policy_include_content
+    - nms_sm_policy_decode_content
 
 - name: Update link when UID is provided
   set_fact:
@@ -49,5 +49,3 @@
     jmes_path: "*.versions[? metadata.uid == '{{ nms_sm_policy.metadata.uid }}' ].metadata[]"
   loop: "{{ nms_sm_policy_refs | json_query(jmes_path) }}"
   when: nms_sm_policy.metadata.uid is defined
-
-

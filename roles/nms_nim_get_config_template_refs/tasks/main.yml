@@ -36,8 +36,6 @@
   fail:
     msg: "WARNING - Detected a possible duplicate name in your staged configs"
   when:
-  - nms_nim_config_template_duplicate_warn 
-  - ( nms_nim_config_template_refs | length ) / 2 < ( nms_nim_config_template_status.json['items'] | length )
+    - nms_nim_config_template_duplicate_warn
+    - ( nms_nim_config_template_refs | length ) / 2 < ( nms_nim_config_template_status.json['items'] | length )
   ignore_errors: true
-
-

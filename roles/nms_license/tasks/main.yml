@@ -10,8 +10,8 @@
     - nms_license
 
 - name: Check NMS Authentication
-  fail: 
-    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role. 
+  fail:
+    msg: "Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role."
   when: nms_auth_headers is undefined
 
 - name: GET NMS license status
@@ -50,4 +50,3 @@
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: nms_license_status
-

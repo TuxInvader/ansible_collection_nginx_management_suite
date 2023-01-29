@@ -26,7 +26,6 @@
 
 - name: Set nms_instance_group_refs fact
   set_fact:
-    nms_instance_group_refs: "{{ nms_instance_group_refs | default({}) | combine({ item.name: (item | combine({ 'rel': nms_api_version ~ '/instance-groups/' ~ item.uid }))}, recursive=True) }}"
+    nms_instance_group_refs: "{{ nms_instance_group_refs | default({}) | combine({ item.name: (item |
+                             combine({ 'rel': nms_api_version ~ '/instance-groups/' ~ item.uid }))}, recursive=True) }}"
   loop: "{{ nms_instance_group_status.json['items'] }}"
-
-

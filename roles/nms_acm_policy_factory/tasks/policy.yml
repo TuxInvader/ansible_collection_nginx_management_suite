@@ -7,13 +7,13 @@
       set_fact:
         this_policy:
           proxy-request-headers:
-          - metadata:
-              appliedOn: "{{ policy.params.applied_on | default('backend') }}"
-              labels: "{{ policy.params.labels | default(['default']) }}"
-            action:
-              proxyHeaders:
-                proxyDefaultHeadersToBackend: "{{ policy.params.proxy_default_headers | default(true) }}"
-                proxyCustomHeadersToBackend: "{{ policy.params.proxy_custom_headers | default([]) }}"
+            - metadata:
+                appliedOn: "{{ policy.params.applied_on | default('backend') }}"
+                labels: "{{ policy.params.labels | default(['default']) }}"
+              action:
+                proxyHeaders:
+                  proxyDefaultHeadersToBackend: "{{ policy.params.proxy_default_headers | default(true) }}"
+                  proxyCustomHeadersToBackend: "{{ policy.params.proxy_custom_headers | default([]) }}"
 
     - name: Update nms_acm_policy_bundle fact
       set_fact:
@@ -28,25 +28,25 @@
       assert:
         that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
       loop:
-      - "{{ policy.params }}"
-      - "{{ policy.params.api_key_name }}"
-      - "{{ policy.params.api_keys }}"
+        - "{{ policy.params }}"
+        - "{{ policy.params.api_key_name }}"
+        - "{{ policy.params.api_keys }}"
 
     - name: Set metadata
       set_fact:
         this_policy:
           apikey-authn:
-          - metadata:
-              appliedOn: "{{ policy.params.applied_on | default('inbound') }}"
-              context: "{{ policy.params.context | default('proxy') }}"
-              labels: "{{ policy.params.labels | default(['default']) }}"
-            action:
-              apiKeyName: "{{ policy.params.api_key_name }}"
-              credentialForward: "{{ policy.params.credential_forward | default(false)}}"
-              errorReturnConditions:
-                noMatch: "{{ { 'returnCode': policy.params.no_match_return_code | default(403) } }}" 
-                notSupplied: "{{ { 'returnCode': policy.params.not_supplied_return_code | default(401) } }}" 
-            data: "{{ policy.params.api_keys | default([]) }}"
+            - metadata:
+                appliedOn: "{{ policy.params.applied_on | default('inbound') }}"
+                context: "{{ policy.params.context | default('proxy') }}"
+                labels: "{{ policy.params.labels | default(['default']) }}"
+              action:
+                apiKeyName: "{{ policy.params.api_key_name }}"
+                credentialForward: "{{ policy.params.credential_forward | default(false) }}"
+                errorReturnConditions:
+                  noMatch: "{{ { 'returnCode': policy.params.no_match_return_code | default(403) } }}"
+                  notSupplied: "{{ { 'returnCode': policy.params.not_supplied_return_code | default(401) } }}"
+              data: "{{ policy.params.api_keys | default([]) }}"
 
     - name: Update nms_acm_policy_bundle fact
       set_fact:
@@ -61,19 +61,18 @@
       set_fact:
         this_policy:
           cors:
-          - metadata:
-              appliedOn: "{{ policy.params.applied_on | default('inbound') }}"
-              labels: "{{ policy.params.labels | default(['default']) }}"
-            action:
-              allowCredentials: "{{ policy.params.allow_credentials | default(false) }}"
-              allowHeaders: "{{ policy.params.allow_headers | default(['Accept','Authorization','Content-Type','Origin','X-Cache-Status'])}}"
-              allowMethods: "{{ policy.params.allow_methods | default(['GET','HEAD','DELETE','OPTIONS','PATCH','POST','PUT','TRACE'])}}"
-              allowOrigins: "{{ policy.params.allow_origins | default([{'exact': '*'}])}}"
-              exposeHeaders: "{{ policy.params.expose_headers | default([])}}"
+            - metadata:
+                appliedOn: "{{ policy.params.applied_on | default('inbound') }}"
+                labels: "{{ policy.params.labels | default(['default']) }}"
+              action:
+                allowCredentials: "{{ policy.params.allow_credentials | default(false) }}"
+                allowHeaders: "{{ policy.params.allow_headers | default(['Accept','Authorization','Content-Type','Origin','X-Cache-Status']) }}"
+                allowMethods: "{{ policy.params.allow_methods | default(['GET','HEAD','DELETE','OPTIONS','PATCH','POST','PUT','TRACE']) }}"
+                allowOrigins: "{{ policy.params.allow_origins | default([{'exact': '*'}]) }}"
+                exposeHeaders: "{{ policy.params.expose_headers | default([]) }}"
 
     - name: Update nms_acm_policy_bundle fact
       set_fact:
         nms_acm_policy_bundle: "{{ nms_acm_policy_bundle | default({}) | combine( this_policy, recursive=True) }}"
 
   when: policy.type == 'cors'
-

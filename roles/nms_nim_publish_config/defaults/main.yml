@@ -8,4 +8,3 @@ nms_nim_publish_wait: true
 nms_nim_publish_ignore_conflict: false
 nms_nim_publish_validate_config: true
 nms_nim_publish_encode_content: false
-

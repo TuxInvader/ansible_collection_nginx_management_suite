@@ -27,29 +27,31 @@
 - name: Encode file contents
   block:
 
-  - name: Set config fact
-    set_fact:
-      post_config: "{{ nms_nim_publish.config | combine({ 'configFiles': {'files': []}, 'auxFiles': {'files': []}}, recursive=True) }}"
+    - name: Set config fact
+      set_fact:
+        post_config: "{{ nms_nim_publish.config | combine({ 'configFiles': {'files': []}, 'auxFiles': {'files': [] }}, recursive=True) }}"
 
-  - name: Encode each config file
-    set_fact: 
-      post_config: "{{  post_config | combine({ 'configFiles': {'files': [ {'contents': (file.contents|b64encode), 'name': file.name }]}}, list_merge='append', recursive=True) }}"
-    loop: "{{ nms_nim_publish.config.configFiles.files }}"
-    loop_control:
-      loop_var: file
-    when: 
-    - nms_nim_publish.config.configFiles is defined
-    - nms_nim_publish.config.configFiles.files is defined
+    - name: Encode each config file
+      set_fact:
+        post_config: "{{  post_config | combine({ 'configFiles': {'files':
+                     [ {'contents': (file.contents|b64encode), 'name': file.name }] }}, list_merge='append', recursive=True) }}"
+      loop: "{{ nms_nim_publish.config.configFiles.files }}"
+      loop_control:
+        loop_var: file
+      when:
+        - nms_nim_publish.config.configFiles is defined
+        - nms_nim_publish.config.configFiles.files is defined
 
-  - name: Encode each aux file
-    set_fact: 
-      post_config: "{{  post_config | combine({ 'auxFiles': {'files': [ {'contents': (file.contents|b64encode), 'name': file.name }]}}, list_merge='append', recursive=True) }}"
-    loop: "{{ nms_nim_publish.config.auxFiles.files }}"
-    loop_control:
-      loop_var: file
-    when: 
-    - nms_nim_publish.config.auxFiles is defined
-    - nms_nim_publish.config.auxFiles.files is defined
+    - name: Encode each aux file
+      set_fact:
+        post_config: "{{  post_config | combine({ 'auxFiles': {'files': [ {'contents': (file.contents|b64encode),
+                     'name': file.name }] }}, list_merge='append', recursive=True) }}"
+      loop: "{{ nms_nim_publish.config.auxFiles.files }}"
+      loop_control:
+        loop_var: file
+      when:
+        - nms_nim_publish.config.auxFiles is defined
+        - nms_nim_publish.config.auxFiles.files is defined
 
   when: nms_nim_publish_encode_content
 
@@ -58,8 +60,8 @@
   set_fact:
     post_config: "{{ post_config | combine({ 'updateTime': ( '%Y-%m-%dT%H:%M:%S.000Z' | strftime(ansible_facts.date_time.epoch))}, recursive=True) }}"
   when:
-  - nms_nim_publish.config.configFiles is defined
-  - nms_nim_publish.config.updateTime is undefined
+    - nms_nim_publish.config.configFiles is defined
+    - nms_nim_publish.config.updateTime is undefined
 
 # Should we ignore conflicts when publishing? Only set this if it isn't provided in the dictionary
 - name: Set ignore conflict preference
@@ -90,23 +92,22 @@
 - name: Wait for Publishing
   block:
 
-  - name: "Wait for Configuration... DeploymentUId: {{ nms_publish_response.json.deploymentUID | default('unknown') }}"
-    uri:
-      url: "https://{{ nms_fqdn }}{{ nms_publish_response.json.links.rel }}"
-      method: GET
-      return_content: true
-      status_code:
-        - 200
-        - 404
-      validate_certs: "{{ nms_validate_certs | default(false) }}"
-      headers: "{{ nms_auth_headers }}"
-    register: nms_publish_result
-    retries: 12
-    delay: 5
-    until: (nms_publish_result.json.status is not none) and (nms_publish_result.json.status == "finalized")
-    failed_when: |
-       ((nms_publish_result.json.details.failure is not none) and (nms_publish_result.json.details.failure|length > 0) ) or
-       ((nms_publish_result.json.status is not none) and (nms_publish_result.json.status != "finalized" ))
+    - name: "Wait for Configuration... DeploymentUId: {{ nms_publish_response.json.deploymentUID | default('unknown') }}"
+      uri:
+        url: "https://{{ nms_fqdn }}{{ nms_publish_response.json.links.rel }}"
+        method: GET
+        return_content: true
+        status_code:
+          - 200
+          - 404
+        validate_certs: "{{ nms_validate_certs | default(false) }}"
+        headers: "{{ nms_auth_headers }}"
+      register: nms_publish_result
+      retries: 12
+      delay: 5
+      until: (nms_publish_result.json.status is not none) and (nms_publish_result.json.status == "finalized")
+      failed_when: |
+         ((nms_publish_result.json.details.failure is not none) and (nms_publish_result.json.details.failure|length > 0) ) or
+         ((nms_publish_result.json.status is not none) and (nms_publish_result.json.status != "finalized" ))
 
   when: nms_nim_publish_wait == true
-

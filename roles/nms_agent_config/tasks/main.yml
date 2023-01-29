@@ -11,7 +11,7 @@
   stat:
     path: /etc/nginx-agent/nginx-agent.conf
   register: agent_conf_file
-  
+
 - name: Ensure Agent is installed
   block:
 
@@ -35,8 +35,8 @@
     - name: Run the installer script
       command:
         argv:
-        - /bin/sh
-        - "{{  agent_tempfile.path }}"
+          - /bin/sh
+          - "{{  agent_tempfile.path }}"
       become: true
       become_method: sudo
       become_user: root
@@ -57,29 +57,29 @@
 - name: Setup Agent for NAP
   block:
 
-  - name: Enable NAP data collection
-    blockinfile:
-      path: /etc/nginx-agent/nginx-agent.conf
-      block: |
-        nginx_app_protect:
-          report_interval: {{nms_agent_nap_collection_seconds}}s
-        nap_monitoring:
-          collector_buffer_size: 50000
-          processor_buffer_size: 50000
-          syslog_ip: "127.0.0.1"
-          syslog_port: "{{ nms_agent_nap_syslog_port }}"
-    become: true
-    notify: Restart Agent
+    - name: Enable NAP data collection
+      blockinfile:
+        path: /etc/nginx-agent/nginx-agent.conf
+        block: |
+          nginx_app_protect:
+            report_interval: {{ nms_agent_nap_collection_seconds }}s
+          nap_monitoring:
+            collector_buffer_size: 50000
+            processor_buffer_size: 50000
+            syslog_ip: "127.0.0.1"
+            syslog_port: "{{ nms_agent_nap_syslog_port }}"
+      become: true
+      notify: Restart Agent
 
-  - name: Ensure /etc/app_protect is included in config_dirs
-    lineinfile:
-      path: /etc/nginx-agent/nginx-agent.conf
-      backrefs: yes
-      state: present
-      regexp: '^config_dirs:(\s*)"(((?!/etc/app_protect).)*)"'
-      line: 'config_dirs:\1"\2:/etc/app_protect"'
-    become: true
-    notify: Restart Agent
+    - name: Ensure /etc/app_protect is included in config_dirs
+      lineinfile:
+        path: /etc/nginx-agent/nginx-agent.conf
+        backrefs: true
+        state: present
+        regexp: '^config_dirs:(\s*)"(((?!/etc/app_protect).)*)"'
+        line: 'config_dirs:\1"\2:/etc/app_protect"'
+      become: true
+      notify: Restart Agent
 
   when: nms_agent_nap_enable
 
@@ -90,7 +90,6 @@
     state: started
   become: true
 
-- name: Install and configure the DevPortal 
+- name: Install and configure the DevPortal
   include_tasks: devportal.yml
   when: nms_acm_devportal is true
-

@@ -29,7 +29,7 @@
   set_fact:
     nms_acm_apidoc_refs: "{{ nms_acm_apidoc_refs | default({}) | combine({ item.name: item }, recursive=True) }}"
   loop: "{{ nms_acm_apidoc_status.json['items'] }}"
-  
+
 - name: Create ACM API-Doc
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/api-docs"
@@ -49,7 +49,6 @@
 
 - name: Upsert ACM API-Doc
   uri:
-    #url: "https://{{ nms_fqdn }}{{ nms_acm_apidoc_refs[ nms_acm_apidoc.name ].metadata.link.rel }}"
     url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/api-docs/{{ nms_acm_apidoc.name }}"
     method: PUT
     body: "{{ nms_acm_apidoc.spec | to_json }}"
@@ -79,7 +78,7 @@
   set_fact:
     nms_acm_apidoc_refs: "{{ nms_acm_apidoc_refs | default({}) | combine({ item.name: item }, recursive=True) }}"
   loop: "{{ nms_acm_apidoc_status.json['items'] }}"
-  
+
 - name: GET ACM API-Docs status
   uri:
     url: "https://{{ nms_fqdn }}{{ nms_api_version }}/services/workspaces/{{ nms_acm_workspace.name }}/api-docs/{{ nms_acm_apidoc.name }}"
@@ -89,4 +88,3 @@
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: nms_acm_apidoc_status
-
