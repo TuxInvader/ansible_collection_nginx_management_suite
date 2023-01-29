@@ -79,8 +79,8 @@
 
     - name: "Wait for Configuration... JobID: {{ nms_publish_result.json.configState.jobID | default('unknown') }}"
       uri:
-        url: https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments/
-             {{ nms_acm_environment.name }}/jobs/{{ nms_publish_result.json.configState.jobID }}
+        url: https://{{ nms_fqdn }}{{ nms_api_version }}/infrastructure/workspaces/{{ nms_acm_workspace.name }}/environments/{{
+             nms_acm_environment.name }}/jobs/{{ nms_publish_result.json.configState.jobID }}
         method: GET
         return_content: true
         status_code:
