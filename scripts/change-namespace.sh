@@ -2,7 +2,7 @@
 
 gitNS=nginxinc
 newNS=tuxinvader
-dirs="galaxy.yml plugins roles docs README*"
+dirs="galaxy.yml plugins roles docs README.md"
 
 if [ ! -d .git ]
 then
