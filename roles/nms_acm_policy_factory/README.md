@@ -4,7 +4,7 @@ NMS Licensing
 NGINX Management Suite (NMS) Ansible role to help building ACM policies
 
 This role takes in a list of policies, and sets a fact called `nms_acm_policy_bundle` which
-contains the policies using the provided params and/or the same defaults as the ACM UI.
+contains the policies using the provided configuration merged with the same defaults as the ACM UI.
 
 The `nms_acm_policy_bundle` can then be used with the `nms_acm_proxies` role to publish the
 configuration and policies. See the example below.
@@ -23,10 +23,10 @@ Role Variables
 The NMS ACM Policy will create/update the fact `nms_acm_policy_bundle` with the policies provided. `nms_acm_policies` has the following fields....
 
 `new` - Set to true to start a fresh policy fact with this policy as the first entry
-`policies` - A list of policies including `type` and `params`.
+`policies` - A list of policies including `type` and `policy`.
 
 `type` - Set to one of the supported policy types
-`params` - Set to the parameters for the policy
+`policy` - Set your customizations for the policy
 
 Dependencies
 ------------
@@ -62,10 +62,13 @@ Example Playbook
         new: true
         policies:
         - type: proxy-request-headers
-          params:
-            proxy_custom_headers:
-            - key: x-foo
-              value: header.x_foo
+          policy:
+            action:
+              proxyHeaders:
+                proxyCustomHeadersToBackend:
+                  - key: x-foo
+                    value: header.x_foo
+                    isSensitive: false
         - type: cors
 
   - name: Create F1 API Proxies

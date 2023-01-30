@@ -6,18 +6,23 @@
     - name: Set metadata
       set_fact:
         this_policy:
-          proxy-request-headers:
-            - metadata:
-                appliedOn: "{{ policy.params.applied_on | default('backend') }}"
-                labels: "{{ policy.params.labels | default(['default']) }}"
-              action:
-                proxyHeaders:
-                  proxyDefaultHeadersToBackend: "{{ policy.params.proxy_default_headers | default(true) }}"
-                  proxyCustomHeadersToBackend: "{{ policy.params.proxy_custom_headers | default([]) }}"
+          metadata:
+            labels:
+              targetPolicyName: default
+          systemMetadata:
+            appliedOn: "backend"
+          action:
+            proxyHeaders:
+              proxyDefaultHeadersToBackend: true
+              proxyCustomHeadersToBackend: []
+
+    - name: Merge User Data
+      set_fact:
+        policy_list: "{{ {'proxy-request-headers': [ this_policy | combine( policy.policy | default({}), recursive=True, list_merge='replace') ]} }}"
 
     - name: Update nms_acm_policy_bundle fact
       set_fact:
-        nms_acm_policy_bundle: "{{ nms_acm_policy_bundle | default({}) | combine( this_policy, recursive=True) }}"
+        nms_acm_policy_bundle: "{{ nms_acm_policy_bundle | default({}) | combine( policy_list, recursive=True) }}"
 
   when: policy.type == 'proxy-request-headers'
 
@@ -28,51 +33,107 @@
       assert:
         that: ("{{ item }} is defined") and ("{{ item }} | length > 0")
       loop:
-        - "{{ policy.params }}"
-        - "{{ policy.params.api_key_name }}"
-        - "{{ policy.params.api_keys }}"
+        - "{{ policy.policy.data }}"
 
     - name: Set metadata
       set_fact:
         this_policy:
-          apikey-authn:
-            - metadata:
-                appliedOn: "{{ policy.params.applied_on | default('inbound') }}"
-                context: "{{ policy.params.context | default('proxy') }}"
-                labels: "{{ policy.params.labels | default(['default']) }}"
-              action:
-                apiKeyName: "{{ policy.params.api_key_name }}"
-                credentialForward: "{{ policy.params.credential_forward | default(false) }}"
-                errorReturnConditions:
-                  noMatch: "{{ { 'returnCode': policy.params.no_match_return_code | default(403) } }}"
-                  notSupplied: "{{ { 'returnCode': policy.params.not_supplied_return_code | default(401) } }}"
-              data: "{{ policy.params.api_keys | default([]) }}"
+          metadata:
+            labels:
+              targetPolicyName: "default"
+          systemMetadata:
+            appliedOn: "inbound"
+            context: "proxy"
+          action:
+            apiKeyName: "apikey"
+            credentialForward: false
+            suppliedIn: "header"
+            errorReturnConditions:
+              noMatch:
+                returnCode: 401
+              notSupplied:
+                returnCode: 403
+          data: []
+
+    - name: Merge User Data
+      set_fact:
+        policy_list: "{{ {'apikey-authn': [ this_policy | combine( policy.policy | default({}), recursive=True, list_merge='replace') ]} }}"
 
     - name: Update nms_acm_policy_bundle fact
       set_fact:
-        nms_acm_policy_bundle: "{{ nms_acm_policy_bundle | default({}) | combine( this_policy, recursive=True) }}"
+        nms_acm_policy_bundle: "{{ nms_acm_policy_bundle | default({}) | combine( policy_list, recursive=True) }}"
 
   when: policy.type == 'apikey-authn'
+
+- name: Process basic-authn type
+  block:
+
+    - name: Create Default Policy
+      set_fact:
+        this_policy:
+          metadata:
+            labels:
+              targetPolicyName: "default"
+          systemMetadata:
+            appliedOn: "inbound"
+            context: "proxy"
+          action:
+            credentialForward: "false"
+            errorReturnConditions:
+              notSupplied:
+                grpcStatusCode: 16
+                returnCode: 401
+          data: []
+
+    - name: Merge User Data
+      set_fact:
+        policy_list: "{{ {'basic-authn': [ this_policy | combine( policy.policy | default({}), recursive=True, list_merge='replace') ]} }}"
+
+    - name: Update nms_acm_policy_bundle fact
+      set_fact:
+        nms_acm_policy_bundle: "{{ nms_acm_policy_bundle | default({}) | combine( policy_list, recursive=True) }}"
+
+  when: policy.type == 'basic-authn'
 
 - name: Process CORS type
   block:
 
-    - name: Set metadata
+    - name: Create Default Policy
       set_fact:
         this_policy:
-          cors:
-            - metadata:
-                appliedOn: "{{ policy.params.applied_on | default('inbound') }}"
-                labels: "{{ policy.params.labels | default(['default']) }}"
-              action:
-                allowCredentials: "{{ policy.params.allow_credentials | default(false) }}"
-                allowHeaders: "{{ policy.params.allow_headers | default(['Accept','Authorization','Content-Type','Origin','X-Cache-Status']) }}"
-                allowMethods: "{{ policy.params.allow_methods | default(['GET','HEAD','DELETE','OPTIONS','PATCH','POST','PUT','TRACE']) }}"
-                allowOrigins: "{{ policy.params.allow_origins | default([{'exact': '*'}]) }}"
-                exposeHeaders: "{{ policy.params.expose_headers | default([]) }}"
+          metadata:
+            labels:
+              targetPolicyName: "default"
+          systemMetadata:
+            appliedOn: "inbound"
+            context: "proxy"
+          action:
+            allowCredentials: false
+            allowHeaders: 
+              - Accept
+              - Authorization
+              - Content-Type
+              - Origin
+              - X-Cache-Status
+            allowMethods: 
+              - GET
+              - HEAD
+              - DELETE
+              - OPTIONS
+              - PATCH
+              - POST
+              - PUT
+              - TRACE
+            allowOrigins:
+              - exact: "*"
+            exposeHeaders: []
+
+    - name: Merge User Data
+      set_fact:
+        policy_list: "{{ {'cors': [ this_policy | combine( policy.policy | default({}), recursive=True, list_merge='replace') ]} }}"
 
     - name: Update nms_acm_policy_bundle fact
       set_fact:
-        nms_acm_policy_bundle: "{{ nms_acm_policy_bundle | default({}) | combine( this_policy, recursive=True) }}"
+        nms_acm_policy_bundle: "{{ nms_acm_policy_bundle | default({}) | combine( policy_list, recursive=True) }}"
 
   when: policy.type == 'cors'

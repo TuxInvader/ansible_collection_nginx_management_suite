@@ -10,7 +10,7 @@
 - name: Clear nms_acm_policy_bundle fact
   set_fact:
     nms_acm_policy_bundle: {}
-  when: nms_acm_policies.new is defined and nms_acm_policies.new is True
+  when: nms_acm_policies.new is defined and nms_acm_policies.new is true
   
 - name: Build the policy bundle
   include_tasks: policy.yml
