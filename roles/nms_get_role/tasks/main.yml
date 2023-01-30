@@ -1,0 +1,28 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ({{ item }} is defined) and ({{ item }} | string | length > 0)
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_role_name
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: GET NMS Role status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_api_version }}/roles/{{ nms_role_name | lower }}"
+    method: GET
+    status_code: 200
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_role_status
+
+- name: Set NMS Role Fact
+  set_fact:
+    nms_role_config: "{{ nms_role_status.json }}"
