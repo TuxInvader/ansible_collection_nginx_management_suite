@@ -5,6 +5,8 @@ nms_validate_certs: false
 nms_agent_nap_enable: false
 nms_agent_nap_syslog_port: 514
 nms_agent_nap_collection_seconds: 15
+nms_agent_nap_precompile: true
 nms_acm_devportal: false
 nms_acm_devportal_db: postgres
 nms_acm_devportal_db_init: true
+
