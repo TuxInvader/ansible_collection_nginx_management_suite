@@ -1,0 +1,37 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ({{ item }} is defined) and ({{ item }} | string | length > 0)
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+    - nms_instance_hostname
+
+- name: Check NMS Authentication
+  fail:
+    msg: Missing Authentication headers 'nms_auth_headers', you need to include the 'nms_authenticate' role.
+  when: nms_auth_headers is undefined
+
+- name: Copy NGINX instance refs from localhost
+  set_fact:
+    nms_instance_refs: "{{ hostvars['localhost']['nms_instance_refs'] }}"
+  when: hostvars['localhost']['nms_instance_refs'] is defined
+
+- name: Get NGINX instance refs from NMS
+  include_role:
+    name: nginxinc.nginx_management_suite.nms_get_instance_refs
+  when: hostvars['localhost']['nms_instance_refs'] is undefined
+
+- name: Remove the Instance from NIM
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_instance_refs[ nms_instance_hostname ].rel }}"
+    method: DELETE
+    status_code: 204
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_del_response
+  changed_when: nms_del_response.status == 204
+  when: nms_instance_hostname in nms_instance_refs
+

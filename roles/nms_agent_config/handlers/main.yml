@@ -6,6 +6,13 @@
     state: restarted
   become: true
 
+- name: Restart NGINX
+  systemd:
+    name: nginx.service
+    enabled: true
+    state: restarted
+  become: true
+
 - name: Restart Postgres
   systemd:
     name: postgresql.service

@@ -1,0 +1,144 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ({{ item }} is defined) and ({{ item }} | string | length > 0)
+  loop:
+    - nms_fqdn
+    - nms_validate_certs
+
+- name: Check for Agent installation
+  stat:
+    path: /etc/nginx-agent/nginx-agent.conf
+  register: agent_conf_file
+
+- name: Ensure Agent is installed
+  block:
+
+    - name: Create temp installer file
+      tempfile:
+        state: file
+        prefix: nginx-agent-installer
+      register: agent_tempfile
+
+    - name: Download the Agent installer script
+      uri:
+        url: "https://{{ nms_fqdn }}/install/nginx-agent"
+        method: GET
+        return_content: true
+        status_code:
+          - 200
+        validate_certs: "{{ nms_validate_certs | default(false) }}"
+        dest: "{{ agent_tempfile.path }}"
+      register: agent_install_dl
+
+    - name: Run the installer script
+      command:
+        argv:
+          - /bin/sh
+          - "{{  agent_tempfile.path }}"
+      become: true
+      become_method: sudo
+      become_user: root
+      notify: Restart Agent
+
+  when: not agent_conf_file.stat.exists
+
+- name: Set the instance group
+  lineinfile:
+    path: /etc/nginx-agent/agent-dynamic.conf
+    state: present
+    regexp: "^instance_group:.*"
+    line: "instance_group: {{ nms_agent_instance_group }}"
+  when: nms_agent_instance_group is defined and nms_agent_instance_group | length > 0
+  become: true
+  notify: Restart Agent
+
+- name: Unset the instance group
+  lineinfile:
+    path: /etc/nginx-agent/agent-dynamic.conf
+    state: absent
+    regexp: "^instance_group:.*"
+  when: ( nms_agent_instance_group | default('') | length ) == 0
+  become: true
+  notify: Restart Agent
+
+- name: Setup Agent for NAP
+  block:
+
+    - name: Configure nginx_app_protect block
+      blockinfile:
+        path: /etc/nginx-agent/nginx-agent.conf
+        marker: "# {mark} NAP-General-Block"
+        block: |
+          nginx_app_protect:
+            report_interval: {{ nms_agent_nap_collection_seconds }}s
+            precompiled_publication: {{ nms_agent_nap_precompile | lower }}
+      become: true
+      notify: Restart Agent
+
+    - name: Configure nap_monitoring block
+      blockinfile:
+        path: /etc/nginx-agent/nginx-agent.conf
+        marker: "# {mark} NAP-Monitoring-Block"
+        block: |
+          nap_monitoring:
+            collector_buffer_size: 50000
+            processor_buffer_size: 50000
+            syslog_ip: "127.0.0.1"
+            syslog_port: "{{ nms_agent_nap_syslog_port }}"
+      become: true
+      notify: Restart Agent
+
+    - name: Ensure /etc/app_protect is included in config_dirs
+      lineinfile:
+        path: /etc/nginx-agent/nginx-agent.conf
+        backrefs: true
+        state: present
+        regexp: '^config_dirs:(\s*)"(((?!/etc/app_protect).)*)"'
+        line: 'config_dirs:\1"\2:/etc/app_protect"'
+      become: true
+      notify: Restart Agent
+
+  when: nms_agent_nap_enable
+
+- name: Enable Advanced Metrics collection
+  block:
+
+    - name: Install the advanced metrics module
+      ansible.builtin.package:
+        name:
+          - nginx-plus-module-metrics
+        state: present
+      notify: Restart NGINX
+      become: true
+
+    - name: Configure metrics collection in agent-config
+      blockinfile:
+        path: /etc/nginx-agent/nginx-agent.conf
+        marker: "# {mark} AdvMet-Block"
+        block: |
+          advanced_metrics:
+            socket_path: /var/run/nginx-agent/advanced-metrics.sock
+            aggregation_period: 1s
+            publishing_period: 3s
+            table_sizes_limits:
+              staging_table_max_size: 1000
+              staging_table_threshold: 1000
+              priority_table_max_size: 1000
+              priority_table_threshold: 1000
+      become: true
+      notify: Restart Agent
+
+  when: nms_agent_advanced_metrics
+
+- name: Ensure Agent is running and enabled
+  systemd:
+    name: nginx-agent.service
+    enabled: true
+    state: started
+  become: true
+
+- name: Install and configure the DevPortal
+  include_tasks: devportal.yml
+  when: nms_acm_devportal is true

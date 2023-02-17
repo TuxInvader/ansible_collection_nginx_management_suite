@@ -1,0 +1,53 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ({{ item }} is defined) and ({{ item }} | string | length > 0)
+  loop:
+    - nms_fqdn
+    - nms_validate_certs
+
+- name: Check for Agent installation
+  stat:
+    path: /etc/nginx-agent/nginx-agent.conf
+  register: agent_conf_file
+
+- name: Ensure Agent is stopped and disabled
+  systemd:
+    name: nginx-agent.service
+    enabled: false
+    state: stopped
+  become: true
+  when: agent_conf_file.stat.exists
+
+- name: Remove NGINX Agent (Debian/Ubuntu)
+  block:
+
+    - name: Remove package
+      ansible.builtin.apt:
+        name: nginx-agent
+        state: absent
+        purge: true
+
+  become: true
+  when:
+    - ansible_os_family == "Debian"
+
+- name: Remove NGINX Agent (RedHat/CentOS)
+  block:
+
+    - name: Remove package
+      ansible.builtin.yum:
+        name: nginx-agent
+        state: absent
+
+  become: true
+  when:
+    - ansible_os_family == "RedHat"
+
+- name: Ensure agent config is completely removed
+  ansible.builtin.file:
+    path: /etc/nginx-agent
+    state: absent
+  become: true
+
