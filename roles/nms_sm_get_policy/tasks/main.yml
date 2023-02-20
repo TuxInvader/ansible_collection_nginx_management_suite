@@ -1,0 +1,75 @@
+---
+
+- name: Fail if required variables are not defined
+  assert:
+    that: ({{ item }} is defined) and ({{ item }} | string | length > 0)
+  loop:
+    - nms_fqdn
+    - nms_api_version
+    - nms_validate_certs
+
+- name: Fail if we have no search parameters
+  fail:
+    msg: "You must provide at least one of: `nms_sm_policy_rel` or `nms_sm_policy_uid` or `nms_sm_policy_name`"
+  when:
+  - nms_sm_policy_name is undefined or nms_sm_policy_name == ""
+  - nms_sm_policy_uid is undefined or nms_sm_policy_uid == ""
+  - nms_sm_policy_rel is undefined or nms_sm_policy_rel == ""
+
+- name: Reset nms_sm_get_policy_link fact
+  set_fact:
+    nms_sm_get_policy_link: ""
+
+- name: Set nms_sm_get_policy_link fact (from rel)
+  set_fact:
+    nms_sm_get_policy_link: "{{ nms_sm_policy_rel }}"
+  when: nms_sm_policy_rel is defined and nms_sm_policy_rel != ""
+
+- name: Set nms_sm_get_policy_link fact (from uid)
+  set_fact:
+    nms_sm_get_policy_link: "{{ nms_api_version }}/security/policies/{{nms_sm_policy_uid}}"
+  when:
+  - nms_sm_get_policy_link == ""
+  - nms_sm_policy_uid is defined and nms_sm_policy_uid != ""
+
+- name: Locate policy by Name
+  block:
+
+    - name: Get the policy refs
+      include_role:
+        name: nginxinc.nginx_management_suite.nms_sm_get_policy_refs
+      vars:
+        nms_sm_policy_include_content: false
+        nms_sm_policy_decode_content: false
+
+    - name: Fail if policy doesn't exist
+      fail:
+        msg: Cannot find policy named {{ nms_sm_policy_name }}.
+      when: nms_sm_policy_name not in nms_sm_policy_refs
+
+    - name: Set nms_sm_get_policy_link fact (from name)
+      set_fact:
+        nms_sm_get_policy_link: "{{  nms_sm_policy_refs[ nms_sm_policy_name ].rel }}"
+
+  when: nms_sm_get_policy_link == ""
+
+- name: GET NMS-SM Policy status
+  uri:
+    url: "https://{{ nms_fqdn }}{{ nms_sm_get_policy_link }}"
+    method: GET
+    status_code:
+      - 200
+      - 404
+    validate_certs: "{{ nms_validate_certs | default(false) }}"
+    headers: "{{ nms_auth_headers }}"
+  register: nms_sm_policy_status
+
+- name: Set raw config set_fact
+  set_fact:
+    nms_sm_encoded_policy: "{{ nms_sm_policy_status.json }}"
+
+- name: Decode policy content
+  set_fact:
+    nms_sm_decoded_policy: "{{ nms_sm_policy_status.json.content | b64decode | from_json }}"
+  
+  when: nms_sm_policy_decode_content
