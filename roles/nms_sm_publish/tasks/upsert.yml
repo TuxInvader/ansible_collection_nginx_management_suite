@@ -54,7 +54,8 @@
     status_code:
       - 201
       - 202
+      - 204
     validate_certs: "{{ nms_validate_certs | default(false) }}"
     headers: "{{ nms_auth_headers }}"
   register: response
-  changed_when: response.status == 201
+  changed_when: response.status == 202
