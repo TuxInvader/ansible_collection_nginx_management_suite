@@ -23,5 +23,11 @@
   include_tasks: upsert.yml
   when: nms_sm_policy_state == "present"
 
-- name: Update Status
-  include_tasks: get_status.yml
+- name: reload refs
+  include_role:
+    name: nginxinc.nginx_management_suite.nms_sm_get_policy_refs
+  vars:
+    nms_sm_policy_include_content: false
+    nms_sm_policy_decode_content: false
+    nms_sm_policy_uid: "{{ nms_sm_policy.metadata.uid | default('') }}"
+

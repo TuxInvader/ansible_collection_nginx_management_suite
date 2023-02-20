@@ -1,9 +1,23 @@
 ---
 
 - name: Locate Existing Policies
-  import_tasks: get_status.yml
+  include_role:
+    name: nginxinc.nginx_management_suite.nms_sm_get_policy_refs
   vars:
+    nms_sm_policy_include_content: false
     nms_sm_policy_decode_content: false
+    nms_sm_policy_uid: "{{ nms_sm_policy.metadata.uid | default('') }}"
+  when: nms_sm_policy_refs is undefined or 'uid' in nms_sm_policy.metadata
+
+- name: Get our policy if it exists
+  include_role:
+    name: nginxinc.nginx_management_suite.nms_sm_get_policy
+  vars:
+    nms_sm_policy_uid: "{{ nms_sm_policy.metadata.uid | default('') }}"
+    nms_sm_policy_name: "{{ nms_sm_policy.metadata.name | default('')}}"
+  when:
+  - nms_sm_policy_refs is defined
+  - nms_sm_policy.metadata.name in nms_sm_policy_refs
 
 - name: Convert policy to JSON and encode content
   set_fact:
@@ -23,8 +37,7 @@
   register: response
   changed_when: response.status == 201
 
-  when: nms_sm_policy_refs is undefined or nms_sm_policy_refs[nms_sm_policy.metadata.name] is undefined or
-        nms_sm_policy_new_revision is true
+  when: nms_sm_encoded_policy is undefined or nms_sm_policy_new_revision is true
 
 - name: Patch existing NMS-SM Policy
   block:
