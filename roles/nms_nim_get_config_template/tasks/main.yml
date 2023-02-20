@@ -8,34 +8,50 @@
     - nms_api_version
     - nms_validate_certs
 
-- name: Fail if we have neither a template name nor a link
+- name: Fail if we have no search parameters
   fail:
-    msg: You must provide exactly oneOf either `nms_nim_config_template_name` or `nms_nim_config_template_uid`
-  when: ( nms_nim_config_template_name is undefined and nms_nim_config_template_uid is undefined ) or
-        ( nms_nim_config_template_name is defined and nms_nim_config_template_uid is defined )
+    msg: "You must provide one of: `nms_nim_config_template_rel`, `nms_nim_config_template_uid`, or `nms_nim_config_template_name`"
+  when: 
+    - nms_nim_config_template_rel is undefined or nms_nim_config_template_rel == ""
+    - nms_nim_config_template_uid is undefined or nms_nim_config_template_uid == ""
+    - nms_nim_config_template_name is undefined or nms_nim_config_template_name == ""
 
-- name: Get Config Template refs
-  include_role:
-    name: nms_nim_get_config_template_refs
+- name: Reset nms_nim_get_config_template_link fact
+  set_fact:
+    nms_nim_get_config_template_link: ""
+
+- name: Set nms_nim_get_config_template_link fact (from rel)
+  set_fact:
+    nms_nim_get_config_template_link: "{{ nms_nim_config_template_rel }}"
+  when: nms_nim_config_template_rel is defined and nms_nim_config_template_rel != ""
 
 - name: Set nms_nim_get_config_template_link fact (from uid)
   set_fact:
-    nms_nim_get_config_template_link: "{{ nms_nim_config_template_refs[ nms_nim_config_template_uid ].rel }}"
-  when: nms_nim_config_template_uid is defined
+    nms_nim_get_config_template_link: "{{ nms_api_version }}/configs/{{nms_nim_config_template_uid}}"
+  when:
+  - nms_nim_get_config_template_link == ""
+  - nms_nim_config_template_uid is defined and nms_nim_config_template_uid != ""
 
-- name: Get NMS Config link by Name
+- name: Locate config_template by Name
   block:
 
-    - name: Fail if Config doesn't exist
+    - name: Get the config_template refs
+      include_role:
+        name: nginxinc.nginx_management_suite.nms_nim_get_config_template_refs
+      vars:
+        nms_nim_config_template_include_content: false
+        nms_nim_config_template_decode_content: false
+
+    - name: Fail if config_template doesn't exist
       fail:
-        msg: Cannot find configuration named {{ nms_nim_config_template_name }}.
+        msg: Cannot find config_template named {{ nms_nim_config_template_name }}.
       when: nms_nim_config_template_name not in nms_nim_config_template_refs
 
     - name: Set nms_nim_get_config_template_link fact (from name)
       set_fact:
         nms_nim_get_config_template_link: "{{  nms_nim_config_template_refs[ nms_nim_config_template_name ].rel }}"
 
-  when: nms_nim_config_template_name is defined
+  when: nms_nim_get_config_template_link == ""
 
 - name: GET NMS Config
   uri:
