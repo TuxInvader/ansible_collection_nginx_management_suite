@@ -5,6 +5,8 @@ __metaclass__ = type
 
 from ansible.plugins.action import ActionBase
 from ansible.errors import AnsibleError, AnsibleFileNotFound
+from ansible.module_utils.common.text.converters import to_native
+from ansible.module_utils.pycompat24 import get_exception
 
 class ActionModule(ActionBase):
     def run(self, tmp=None, task_vars=None):
