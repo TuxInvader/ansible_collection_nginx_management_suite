@@ -1,0 +1,4 @@
+__pycache__/
+*.py[cod]
+*$py.class
+[._]*.s[a-v][a-z]
