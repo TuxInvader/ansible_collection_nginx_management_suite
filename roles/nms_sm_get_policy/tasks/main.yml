@@ -10,7 +10,7 @@
 
 - name: Fail if we have no search parameters
   fail:
-    msg: "You must provide at least one of: `nms_sm_policy_rel` or `nms_sm_policy_uid` or `nms_sm_policy_name`"
+    msg: "You must provide one of: `nms_sm_policy_rel` or `nms_sm_policy_uid` or `nms_sm_policy_name`"
   when:
   - nms_sm_policy_name is undefined or nms_sm_policy_name == ""
   - nms_sm_policy_uid is undefined or nms_sm_policy_uid == ""
