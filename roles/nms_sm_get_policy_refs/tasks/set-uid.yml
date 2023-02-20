@@ -1,0 +1,8 @@
+---
+
+- name: Ensure ref points to correct version
+  set_fact:
+    nms_sm_policy_refs: "{{ nms_sm_policy_refs | default({}) | combine({ item.name: { 'uid': item.uid, 'rel': nms_api_version ~ '/security/policies/' ~ item.uid }}, recursive=True) }}" 
+  vars:
+    jmes_path: "*.versions[? metadata.uid == '{{ nms_sm_policy_uid }}' ].metadata[]"
+  loop: "{{ nms_sm_policy_refs | json_query(jmes_path) }}"
