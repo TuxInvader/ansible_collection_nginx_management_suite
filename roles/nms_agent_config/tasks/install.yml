@@ -100,6 +100,15 @@
       become: true
       notify: Restart Agent
 
+    - name: Ensure log_sm.json log profile is available
+      copy:
+        src: files/log_sm.json
+        dest: /etc/app_protect/conf/log_sm.json
+        owner: nginx
+        group: nginx
+        mode: 0644
+      become: true
+ 
   when: nms_agent_nap_enable
 
 - name: Enable Advanced Metrics collection
