@@ -114,6 +114,9 @@
 - name: Enable Advanced Metrics collection
   block:
 
+    - name: Setup the NMS repo
+      include_tasks: add_nms_repo.yaml
+
     - name: Install the advanced metrics module
       ansible.builtin.package:
         name:
@@ -147,6 +150,10 @@
     enabled: true
     state: started
   become: true
+
+- name: Setup the NMS repo
+  include_tasks: add_nms_repo.yaml
+  when: nms_acm_devportal is true
 
 - name: Install and configure the DevPortal
   include_tasks: devportal.yml

@@ -1,0 +1,39 @@
+- name: Setup the NMS repo (Debian/Ubuntu)
+  block:
+
+    - name: Create the NMS soures file
+      copy:
+        dest: /etc/apt/sources.list.d/nms.list
+        mode: 0644
+        owner: root
+        group: root
+        content: "deb https://pkgs.nginx.com/nms/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} nginx-plus\n"
+      become: true
+      register: apt_src_add
+
+    - name: Create the apt-config for NGINX repos
+      copy:
+        dest: /etc/apt/apt.conf.d/90pkgs-nginx
+        mode: 0644
+        owner: root
+        group: root
+        content: |
+          Acquire::https::pkgs.nginx.com::Verify-Peer "true";
+          Acquire::https::pkgs.nginx.com::Verify-Host "true";
+          Acquire::https::pkgs.nginx.com::SslCert     "/etc/ssl/nginx/nginx-repo.crt";
+          Acquire::https::pkgs.nginx.com::SslKey      "/etc/ssl/nginx/nginx-repo.key";
+      become: true
+
+    - name: Import the NMS key
+      ansible.builtin.apt_key:
+        url: https://cs.nginx.com/static/keys/nginx_signing.key
+        state: present
+      become: true
+
+    - name: Update the apt cache
+      ansible.builtin.apt:
+        update_cache: true
+      become: true
+      when: apt_src_add.changed
+
+  when: ansible_os_family == "Debian"
